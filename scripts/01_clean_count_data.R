@@ -127,6 +127,7 @@ ta_counts$Site[ta_counts$Site == "G-WLP2"] <- "G-WLP1" # keep
 ta_counts$Site[ta_counts$Site == "G-FN2"] <- "G-FN1" # keep
 ta_counts$Site[ta_counts$Site == "G-TNC2"] <- "G-TNC1" # keep
 ta_counts$Site[ta_counts$Site == "P-TE2"] <- "P-TE1"
+ta_counts$Site[ta_counts$Site == "G-KP"] <- "G-KP1"
 
 
 
@@ -146,82 +147,72 @@ sites_count_only <- setdiff(unique(ta_counts$Site),unique(detections$Site))
 sites_count_only
 
 ### G-AGC, GKP1, G-FN1, G-TCC1 not in detection data 
+# mason probablyr emoved these for a reason so let's check them out
+# G-AGC -- only one season of data 
+# G-KP1 -- needs to be merged with G-KP, kinda sparse data 
+# G-FN1 -- only 2 seasons
+# G-TCC1 -- 3 seasons, probs worth keeping
 
-View(detections)
-# remove all sites that don't exist in detection dataset 
+# we'll remove G-AGC and G-FN1
 
-new_dat_cut <- subset(ta_counts)
-new_dat_cut
-
-# now remove all seasons of a site that don't exist in detection data set 
-
-# take closer look at detection data set 
-uniquesiteseason <- unique(detections[c("Site", "Season")])
-uniques <- arrange(uniquesiteseason, Site, Season)
-table(uniquesiteseason$Site)
-
-# same with counts 
-uniquesiteseason2 <- unique(ta_counts[c("Site", "season")])
-table(uniquesiteseason2$Site)
-
-# let's remove oct 21 since it doesn't exist in detections data and is probably
-# incomplete 
-
-ta_counts <- subset(ta_counts, season != "OC21")
+ta_counts <- subset(ta_counts, Site != "G-AGC", 
+                      Site != "G-FN1")
+ta_counts
 
 ################################################################################
 
 #### clean up / make data sets look the same 
-#### 
-# change colnames
-
-colnames(ta_counts) <- c("Species", "locationID", "City", "Season",
-                         "count", "Site", "utmEast", "utmNorth",
-                         "utmZone", "long", "lat") 
-
-head(ta_counts)
-colnames(se_counts)
-head(se_counts)
-
-# add city column to seattle
-se_counts <- se_counts %>%
-  mutate(City = "sewa")
-
-# rename cols 
-colnames(se_counts) <- c("Species", "Site", "Season",
-                         "count",  "lat", "long", "days.active", "City")
 
 
-# remove tacoma columns not needed 
-ta_counts <- ta_counts %>% as.data.frame() %>% select(-c("locationID", "utmEast", "utmNorth", "utmZone"))
-head(ta_counts)
+# add days active to the tacoma count data
 
-## merging spp 
+# change colnames to match dets 
+colnames(detections)
+colnames(ta_counts) <- c("species", "locationID", "city", "Season",
+                         "count", "Site", "long", "lat")
 
-ta_counts$Species[ta_counts$Species == "Mule deer"] <- "Black-tailed deer"
-
-# merge all rabbit to "Rabbit"
-ta_counts$Species[ta_counts$Species == "Eastern cottontail rabbit"] <- "Rabbit"
-ta_counts$Species[ta_counts$Species == "Rabbit (cannot ID)"] <- "Eastern cottontail rabbit"
-
-#### 
-
-
-# also add days active to the tacoma count data
-ta_counts
 
 ta_counts <- ta_counts %>% left_join(detections[,c("Site", "Season", "J")], by = c("Site", "Season"))
 
-# this added a lot of rpeats so only keep the first unique row of each repeat
+
+# this added a lot of repeats so only keep the first unique row of each repeat
 
 ta_counts <- ta_counts %>% distinct()
 
 # replace NAs with 0
 ta_counts$J <- ta_counts$J %>% replace_na(0)
 
-# rename 
-ta_counts$days.active <- ta_counts$J
-ta_counts <- ta_counts %>% select(-J)
+
+# change all city into lowercase
+ta_counts$city <- tolower(ta_counts$city)
+
+# change colnames
+colnames(ta_counts) <- c("species", "locationID", "city", "season",
+                         "count", "site", "long", "lat", "days.active")
+head(ta_counts)
+
+# add city column to seattle
+se_counts <- se_counts %>%
+  mutate(City = "sewa")
+
+# rename cols 
+colnames(se_counts) <- c("species", "site", "season",
+                         "count",  "lat", "long", "days.active", "city")
+
+
+# remove tacoma columns not needed 
+ta_counts <- ta_counts %>% as.data.frame() %>% dplyr::select(-c("locationID"))
+head(ta_counts)
+
+## merging spp 
+
+ta_counts$species[ta_counts$species == "Mule deer"] <- "Black-tailed deer"
+
+# merge all rabbit to "Rabbit"
+ta_counts$species[ta_counts$species == "Eastern cottontail rabbit"] <- "Rabbit"
+ta_counts$species[ta_counts$species == "Rabbit (cannot ID)"] <- "Eastern cottontail rabbit"
+
+#### 
 
 
 
@@ -229,30 +220,35 @@ ta_counts <- ta_counts %>% select(-J)
 # reorder columns to match
 colnames(se_counts)
 colnames(ta_counts)
-se_counts <- se_counts[, c("City", "Site", "Season", "Species", 
+se_counts <- se_counts[, c("city", "site", "season", "species", 
                       "count", "lat", "long", "days.active")]  
-ta_counts<- ta_counts[, c("City", "Site", "Season", "Species", 
+ta_counts<- ta_counts[, c("city", "site", "season", "species", 
                           "count", "lat", "long", "days.active")] 
 
 colnames(ta_counts) == colnames(se_counts)
+nrow(ta_counts)
+nrow(se_counts)
 
 # rename tacoma seasons
-se_counts$Season
-ta_counts$Season[ta_counts$Species == "OC20"] <- "Fall20"
-ta_counts$Season[ta_counts$Species == "JA21"] <- "Winter21"
-ta_counts$Season[ta_counts$Species == "AP21"] <- "Spring21"
-ta_counts$Season[ta_counts$Species == "JU21"] <- "Summer21"
-# ta_counts$Season[ta_counts$Species == "OC21"] <- "Fall21"
-
+se_counts$season
+ta_counts$season[ta_counts$season == "OC20"] <- "Fall20"
+ta_counts$season[ta_counts$season == "JU20"] <- "Summer20"
+ta_counts$season[ta_counts$season == "AP20"] <- "Spring20"
+ta_counts$season[ta_counts$season == "JA20"] <- "Winter20"
+ta_counts$season[ta_counts$season == "OC19"] <- "Fall19"
+ta_counts$season[ta_counts$season == "JU19"] <- "Summer19"
+ta_counts$season[ta_counts$season == "AP19"] <- "Spring19"
+ta_counts$season[ta_counts$season == "JA19"] <- "Winter19"
 
 # rename seattle species
-se_counts$Species[se_counts$Species == "Canis latrans"] <- "Coyote"
-se_counts$Species[se_counts$Species == "Procyon lotor"] <- "Raccoon"
-se_counts$Species[se_counts$Species == "Didelphis virginiana"] <- "Virginia opossum"
-se_counts$Species[se_counts$Species == "Lynx rufus"] <- "Bobcat"
-se_counts$Species[se_counts$Species == "Odocoileus hemionus"] <- "Black-tailed deer"
-se_counts$Species[se_counts$Species == "Procyon lotor"] <- "Raccoon"
-se_counts$Species[se_counts$Species == "Ursus americanus"] <- "Black bear"
+se_counts$species[se_counts$species == "Canis latrans"] <- "Coyote"
+se_counts$species[se_counts$species == "Procyon lotor"] <- "Raccoon"
+se_counts$species[se_counts$species == "Didelphis virginiana"] <- "Virginia opossum"
+se_counts$species[se_counts$species == "Lynx rufus"] <- "Bobcat"
+se_counts$species[se_counts$species == "Odocoileus hemionus"] <- "Black-tailed deer"
+se_counts$species[se_counts$species == "Procyon lotor"] <- "Raccoon"
+se_counts$species[se_counts$species == "Ursus americanus"] <- "Black bear"
+se_counts$species[se_counts$species == "Lontra canadensis"] <- "River otter"
 
 # squirrel / rabbit 
 # se_counts$Species[ta_counts$Species == "Sylvilagus floridanus"] <- "Eastern cottontail rabbit"
@@ -261,9 +257,11 @@ se_counts$Species[se_counts$Species == "Ursus americanus"] <- "Black bear"
 # new_dat$Species[new_dat$Species == "Fox squirrel"] <- "Squirrel"
 # new_dat$Species[new_dat$Species == "Western gray squirrel"] <- "Squirrel"
 
+
+
+# merge data 
 wa_counts <- rbind(ta_counts, se_counts)
 
-nrow(ta_counts)
-
-View(wa_counts)
+# save merged data
+write_csv(wa_counts, "data/wa_counts.csv")
 
