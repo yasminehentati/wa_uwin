@@ -68,7 +68,8 @@ head(points_wa)
 # check that it looks ok
 mapview(points_wa)
 
-
+st_write(tractsKP_crop, here("data", "cameras", "points_wa.shp"),
+    append = FALSE)
 
 
 ################################################################################
@@ -110,8 +111,8 @@ mapview(tractsKP_crop)
 
 
 # write shapefiles for cropped area 
-st_write(tractsKP_crop, here("data", "income_maps", "seatac_urban_med_income.shp"),
-     append = FALSE)
+# st_write(tractsKP_crop, here("data", "income_maps", "seatac_urban_med_income.shp"),
+  #    append = FALSE)
 
 
 
@@ -192,6 +193,21 @@ imp_map <- rast(here("data", "NLCD_imp",
 # again reproject  points to match raster
 # these are just the points not the buffers
 
+points_WA <- st_transform(points_WA, st_crs(imp_map))
+
+# crop raster to study area 
+
+# create an extent 
+# xmin, xmax, ymin, and ymax (in that order)
+new_extent <- as(extent(-122.8, -121.7, 46.7, 47.8), "SpatialPolygons")
+
+class(new_extent)
+new_extent <- st_transform(new_extent, st_crs(imp_map))
+projection(new_extent)
+# crop imp map to our new extent 
+imp_map <- terra::crop(imp_map, new_extent)
+
+
 points_wa <- points_wa[!st_is_empty(points_wa),]
 points_wa <- as(points_wa, "Spatial")
 
@@ -203,7 +219,7 @@ head(points_wa)
 
 
 # reproject impervious surface map
-imp_map <- terra::project(imp_map,crs(points_wa))
+imp_map <- terra::project(imp_map,crs("EPSG:32610"))
 
 # extract the mean impervious cover around each point using 500 m radius buffer
 imp <- terra::extract(imp_map, points_wa, buffer = 500, fun=mean, df=TRUE)
@@ -211,3 +227,66 @@ imp <- terra::extract(imp_map, points_wa, buffer = 500, fun=mean, df=TRUE)
 imp
 ?terra::extract
 points_WA$imp_surf <- imp$nlcd_2019_impervious_descriptor_l48_20210604
+
+
+#########################
+# scratch
+
+nalc <- raster("data/landcover/north_america_2015_v2/NA_NALCMS_2015_v2_land_cover_30m/NA_NALCMS_2015_v2_land_cover_30m.tif")
+
+# Impervious Surface Cover for the Contiguous US
+is <-raster("C:/data/NLCD_imp/nlcd_2016_impervious_l48/nlcd_2016_impervious_l48_20210604.img")
+
+# Survey Points
+
+cam_wa <- readOGR(dsn = "data/cameras/points_wa.shp") %>% spTransform(crs(nalc))
+
+
+
+cam_is <- cam_wa %>%
+  spTransform(crs(is))
+
+
+# plotlandcover 
+plot(nalc); plot(cam_wa, add = TRUE)
+
+# view US points vs percent impervious
+plot(is); plot(cam_us, col = "white",add = TRUE)
+
+
+## get imp surf for each site 
+
+sites <- cam_wa #%>% filter(city == "chil")
+
+is_us <- data.frame(
+  sites@data,
+  "Impervious" = rep(NA, nrow(sites@data))
+)
+
+i <- 1          # select the site
+buffer <- 1000   # choose the buffer size, in meters
+
+
+# Takes about 8 minutes
+Sys.time()
+
+
+for(i in 1:length(sites)){
+  pt <- sites[i,]                                         # select a point
+  buff <- gBuffer(pt, width = buffer, quadsegs = 25)      # create buffer around the point. This determines the size of the landscape
+  
+  landscape <- is %>%
+    crop(extent(buff)) %>%
+    mask(buff)
+  
+  is_us$Impervious[i] <- extract(landscape, buff, fun = mean, na.rm = TRUE)
+  
+  #plot(landscape); plot(pt, add = TRUE)
+  print(i)
+}
+Sys.time()
+
+is_us <- is_us %>%
+  dplyr::select(c(site, city, city_site, Impervious))
+is_us
+
