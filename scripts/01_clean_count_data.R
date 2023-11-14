@@ -209,7 +209,7 @@ head(ta_counts)
 ta_counts$species[ta_counts$species == "Mule deer"] <- "Black-tailed deer"
 
 # merge all rabbit to "Rabbit"
-ta_counts$species[ta_counts$species == "Eastern cottontail rabbit"] <- "Rabbit"
+ta_counts$species[ta_counts$species == "Rabbit"] <- "Eastern cottontail rabbit"
 ta_counts$species[ta_counts$species == "Rabbit (cannot ID)"] <- "Eastern cottontail rabbit"
 
 #### 
@@ -249,6 +249,12 @@ se_counts$species[se_counts$species == "Odocoileus hemionus"] <- "Black-tailed d
 se_counts$species[se_counts$species == "Procyon lotor"] <- "Raccoon"
 se_counts$species[se_counts$species == "Ursus americanus"] <- "Black bear"
 se_counts$species[se_counts$species == "Lontra canadensis"] <- "River otter"
+
+
+# remove cat and dog from tacoma 
+
+ta_counts <- ta_counts %>% dplyr::filter(species != "Domestic dog", species != "Domestic cat")
+ta_counts$species
 
 # squirrel / rabbit 
 # se_counts$Species[ta_counts$Species == "Sylvilagus floridanus"] <- "Eastern cottontail rabbit"
