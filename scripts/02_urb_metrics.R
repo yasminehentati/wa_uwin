@@ -62,8 +62,8 @@ points_wa <- all_sites %>% distinct(site, .keep_all = TRUE)
 # check that it looks ok
 mapview(points_wa)
 
-# st_write(points_wa, here("data", "cameras", "points_wa.shp"),
-#     append = FALSE)
+st_write(points_wa, here("data", "cameras", "points_wa.shp"),
+     append = FALSE)
 
 
 
