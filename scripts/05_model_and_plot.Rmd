@@ -1,0 +1,644 @@
+---
+title: "all_models_figures"
+output: html_document
+date: "2023-11-23"
+---
+
+Read and explore data 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# read in count and covariate data
+mapview(sites)
+# read in count and covariate data 
+all_dat <- read_csv(here("data", "covariates", "WIDE_COUNTS_ALL_ENV_URB_SITES_1000m.csv")) %>%
+  drop_na(utm_est)  %>% # drop NAs of location  
+  subset(season != "Spring20" & season != "Fall20" & season != "Summer20") # %>% keep only win19-win20
+  # subset(site != "P-OV1" & site != "P-TE1" & site != "P-RWSR" & site != "P-OLT")
+
+
+# remove 
+
+
+# give median days active to sites that have days active as NA
+all_dat$days.active[is.na(all_dat$days.active)] <- median(all_dat$days.active[!is.na(all_dat$days.active)])
+range(all_dat$days.active)
+
+# read in richness/diversity data 
+all_dat_veg <- read_csv(here("data", "covariates", "vegan_sites_all_covs.csv")) %>%
+  drop_na(utm_est) # drop NAs of location 
+
+all_dat_veg$evenness
+# make things factors
+all_dat$city <- as.factor(all_dat$city)
+all_dat$season <- as.factor(all_dat$season)
+all_dat$site <- as.factor(all_dat$site)
+
+
+# make things factors
+all_dat_veg$city <- as.factor(all_dat_veg$city)
+all_dat_veg$site <- as.factor(all_dat_veg$site)
+
+
+# rescale data as needed 
+# all_dat$med_income <- all_dat$med_income / 1000 # to per $1000 
+# all_dat$develop <- all_dat$develop * 100 # to percentages 
+class(all_dat$EXPOSURE)
+class(all_dat$EFFECT)
+class(all_dat$develop)
+class(all_dat$med_income)
+
+# rescale data as needed 
+# all_dat_veg$med_income <- all_dat_veg$med_income / 1000 # to per $1000 
+# all_dat_veg$develop <- all_dat_veg$develop * 100 # to percentages 
+
+
+# explore data 
+colnames(all_dat)
+
+
+# get city specific data set 
+all_dat_tawa  <- all_dat %>% dplyr::filter(city == "tawa")
+all_dat_sewa  <- all_dat %>% dplyr::filter(city == "sewa")
+
+glimpse(all_dat)
+
+
+
+# look at pollution burden distributions
+ggplot(all_dat, aes(x = BURDEN_PERCENTILE)) +
+  geom_histogram(fill = "white", colour = "black") +
+  facet_grid(city ~ .)
+
+# look at correlations 
+cordat <- all_dat %>% dplyr::select(c(develop, EXPOSURE,EFFECT, med_income)) 
+corr <- cor(cordat, method = "spearman", use="pairwise.complete.obs")
+corrplot(corr, method = "number")
+ # all below 0.7 - look ok 
+
+
+```
+
+
+Coyote models 
+Using a negative binomial because of overdispersion in the Poisson model 
+```{r cars}
+#### Model 
+
+mapview(sites)
+colnames(all_dat)
+coymod <- glmmTMB(Coyote ~ develop + EXPOSURE + EFFECT  + 
+                  med_income +  
+                  season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2")
+summary(coymod)
+confint(coymod)
+
+coymod2 <- glmmTMB(Coyote ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2")
+summary(coymod2)
+confint(coymod2)
+AICc(coymod)
+AICc(coymod2)
+
+
+# separate city models 
+
+coymod3a <- glmmTMB(Coyote ~ develop + EXPOSURE + EFFECT  + 
+                  med_income + 
+                  season + (1 | site), 
+                data = all_dat_sewa, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+coymod3b <- glmmTMB(Coyote ~ develop + EXPOSURE + EFFECT  + 
+                  med_income + 
+                  season + (1 | site), 
+                data = all_dat_tawa, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+summary(coymod3a)
+summary(coymod3b)
+AICc(coymod3a)
+AICc(coymod3b)
+
+#### Plot 
+
+
+coynb <- sjPlot::plot_model(coymod2, title = "Coyote",
+                             rm.terms = "season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]", 
+             #                axis.title = "",
+                   show.values = TRUE, show.p = TRUE) + 
+  scale_color_sjplot("circus") + 
+  scale_y_log10(limits = c(0.1, 10))
+
+# model diagnostics 
+simOut <- simulateResiduals(fittedModel = coymod, plot = T)
+# looks like very slight underdispersion 
+testOutliers(coymod)
+
+
+testDispersion(coymod) # again seeing underdispersion 
+
+testZeroInflation(coymod) # test for zero-inflation -- In a model with variable dispersion, 
+# this is often the signal that some other distributional assumptions are violated, 
+# but not seeing zero-inflation so we can probably  move on with this model 
+
+
+plotResiduals(simOut, form = all_dat$site)
+plot(simOut, quantreg = T)
+par(mfrow = c(1,2))
+plotResiduals(simOut, all_dat$city) # diagnostics look a lot better with city as fixed effect 
+# than in a model without city 
+
+plotResiduals(simOut, all_dat$Environment1, quantreg = T)
+
+
+### marginal plots 
+
+
+plot_model(coymod2, type = "pred", terms = "EFFECT",
+           scale_y_log10(limits = c(0.1, 10)))
+
+
+
+```
+
+
+Raccoon models 
+Using a negative binomial because of overdispersion in the Poisson model 
+```{r cars}
+#### Model 
+ 
+racmod <- glmmTMB(Raccoon ~ develop + EXPOSURE + EFFECT + 
+                  med_income +  
+                  season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2")
+summary(racmod)
+confint(racmod)
+
+
+racmod2 <- glmmTMB(Raccoon ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2")
+summary(racmod2)
+confint(racmod2)
+
+AICc(racmod)
+AICc(racmod2)
+# check for overdispersion
+ E2 <- resid(racmod, type = "pearson")
+ N  <- nrow(all_dat)
+ p  <- length(coef(racmod))   
+ sum(E2^2) / (N - p) # underdispersed 
+
+#### Plot 
+racnb <- sjPlot::plot_model(racmod2, title = "Raccoon",
+                             rm.terms = "season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]", 
+                            axis.title = "",
+                   show.values = TRUE, show.p = TRUE) + 
+  scale_color_sjplot("circus") + 
+  scale_y_log10(limits = c(0.1, 10))
+
+
+# modeldiagnostics 
+simOut <- simulateResiduals(fittedModel = racmod2, plot = T)
+# deviations detected 
+testOutliers(racmod2)
+
+
+testDispersion(racmod2) # again seeing underdispersion 
+
+testZeroInflation(racmod2) # test for zero-inflation -- In a model with variable dispersion, 
+# this is often the signal that some other distributional assumptions are violated, 
+# but not seeing zero-inflation so we can probably  move on with this model 
+
+
+plotResiduals(simOut, form = all_dat$site)
+plot(simOut, quantreg = T)
+par(mfrow = c(1,2))
+plotResiduals(simOut, all_dat$city) # diagnostics look a lot better with city as fixed effect 
+# than in a model without city 
+
+plotResiduals(simOut, all_dat$Environment1, quantreg = T)
+
+
+racmod3a <- glmmTMB(Raccoon ~ scale(develop) + scale(EXPOSURE) + scale(EFFECT)  +
+                  scale(med_income) +
+                  season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+racmod3b <- glmmTMB(Raccoon ~ scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
+                  scale(med_income) + city + 
+                  season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+summary(racmod3a)
+summary(racmod3b)
+
+
+
+# separate city models 
+
+racmod3a <- glmmTMB(Raccoon ~ develop + EXPOSURE + EFFECT  + 
+                  med_income + 
+                  season + (1 | site), 
+                data = all_dat_sewa, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+racmod3b <- glmmTMB(Raccoon ~ develop + EXPOSURE + EFFECT  + 
+                  med_income + 
+                  season + (1 | site), 
+                data = all_dat_tawa, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+summary(racmod3a)
+summary(racmod3b)
+
+
+```
+
+Opossum models 
+Using a negative binomial because of overdispersion in the Poisson model 
+```{r cars}
+#### Model 
+oppmod <- glmmTMB(Virginia_opossum ~ develop + EXPOSURE + EFFECT  + 
+                  med_income +  
+                  season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2")
+summary(oppmod)
+confint(oppmod)
+
+oppmod2 <- glmmTMB(Virginia_opossum ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+summary(oppmod2)
+confint(oppmod)
+
+AICc(oppmod)
+AICc(oppmod2)
+
+
+#### Plot 
+
+oppnb <- sjPlot::plot_model(oppmod2, title = "Virginia opossum",
+                             rm.terms = "season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]", 
+          #                   axis.title = "",
+                   show.values = TRUE, show.p = TRUE) + 
+  scale_color_sjplot("circus") + 
+  scale_y_log10(limits = c(0.1, 100))
+
+# model diagnostics 
+simOut <- simulateResiduals(fittedModel = coymod, plot = T)
+# looks like very slight underdispersion 
+testOutliers(coymod)
+
+
+testDispersion(coymod) # again seeing underdispersion 
+
+testZeroInflation(coymod) # test for zero-inflation -- In a model with variable dispersion, 
+# this is often the signal that some other distributional assumptions are violated, 
+# but not seeing zero-inflation so we can probably  move on with this model 
+
+
+plotResiduals(simOut, form = all_dat$site)
+plot(simOut, quantreg = T)
+par(mfrow = c(1,2))
+plotResiduals(simOut, all_dat$city) # diagnostics look a lot better with city as fixed effect 
+# than in a model without city 
+
+plotResiduals(simOut, all_dat$Environment1, quantreg = T)
+
+
+```
+
+
+
+
+Deer models 
+Using a negative binomial because of overdispersion in the Poisson model 
+```{r cars}
+#### Model 
+
+# No deer in Seattle proper 
+
+sewadeer <- all_dat %>% subset(city == "sewa") %>% 
+  subset(Black_tailed_deer != 0)
+# still lots in seattle data tho 
+
+
+deermod <- glmmTMB(Black_tailed_deer ~ develop + EXPOSURE + EFFECT  + 
+                  med_income +  
+                  season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2")
+summary(deermod)
+confint(deermod)
+
+deermod2 <- glmmTMB(Black_tailed_deer ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+summary(deermod2)
+confint(deermod2)
+AICc(deermod2)
+AICc(deermod)
+
+#### Plot 
+deernb <- sjPlot::plot_model(deermod2, title = "Black-tailed deer",
+                             rm.terms = "season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]", 
+              #               axis.title = "",
+                   show.values = TRUE, show.p = TRUE) + 
+  scale_color_sjplot("circus") + 
+  scale_y_log10(limits = c(0.1, 100))
+
+```
+
+
+Squirrel models 
+Using a negative binomial because of overdispersion in the Poisson model 
+```{r cars}
+#### Model 
+ 
+squirmod <- glmmTMB(Eastern_gray_squirrel ~ develop + EXPOSURE + EFFECT  + 
+                  med_income +  
+                  season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2")
+summary(squirmod)
+confint(squirmod)
+
+squirmod2 <- glmmTMB(Eastern_gray_squirrel ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+summary(squirmod2)
+
+#### Plot 
+squirnb <- sjPlot::plot_model(squirmod2, title = "Eastern gray squirrel",
+                             rm.terms = "season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]", 
+         #                    axis.title = "",
+                   show.values = TRUE, show.p = TRUE) + 
+  scale_color_sjplot("circus") + 
+  scale_y_log10(limits = c(0.1, 10))
+
+```
+
+
+Rabbit models 
+Using a negative binomial because of overdispersion in the Poisson model 
+```{r cars}
+#### Model 
+ 
+rabbmod <- glmmTMB(Eastern_cottontail_rabbit ~ develop + EXPOSURE + EFFECT  + 
+                  med_income +  
+                  season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2")
+summary(rabbmod)
+confint(rabbmod)
+
+rabbmod2 <- glmmTMB(Eastern_cottontail_rabbit ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+summary(rabbmod2)
+confint(rabbmod2)
+AICc(rabbmod)
+AICc(rabbmod2)
+
+#### Plot 
+rabbnb <- sjPlot::plot_model(rabbmod2, title = "Eastern cottontail rabbit",
+                             rm.terms = "season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]", 
+            #                 axis.title = "",
+                   show.values = TRUE, show.p = TRUE) + 
+  scale_color_sjplot("circus") + 
+  scale_y_log10(limits = c(0.1, 10))
+
+```
+
+
+Richness model 
+Using a negative binomial because of overdispersion in the Poisson model 
+```{r cars}
+#### Model 
+glimpse(all_dat_veg)
+all_dat_veg$richness
+richmod <- glmmTMB(richness ~ develop + EXPOSURE + EFFECT  + 
+                  med_income +  ( 1 | site), 
+                data = all_dat_veg, 
+                family = "poisson")
+
+richmod2 <- glmmTMB(richness ~ city + scale(develop) + scale(EXPOSURE) + 
+                      scale(EFFECT)  + scale(med_income) + ( 1 | site), 
+                data = all_dat_veg, 
+                family = "poisson")
+summary(richmod)
+confint(richmod)
+
+summary(richmod2)
+AICc(richmod)
+AICc(richmod2)
+
+#### Plot 
+richpois <- sjPlot::plot_model(richmod2, title = "Mammal community species richness",
+                             rm.terms = "season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]", 
+                 #           axis.title = "",
+                   show.values = TRUE, show.p = TRUE) + 
+  scale_color_sjplot("circus") + 
+  scale_y_log10(limits = c(0.1, 10))
+
+```
+
+
+Shannon diversity model
+```{r}
+
+#### Model 
+glimpse(all_dat_veg)
+
+divmod <- glmmTMB(simpson.di ~ develop + EXPOSURE + EFFECT  + 
+                  med_income +  ( 1 | site),
+                data = all_dat_veg, 
+                family = "gaussian")
+
+fixef(divmod)
+
+
+summary(divmod)
+confint(divmod)
+
+divmod2 <- glmmTMB(simpson.di ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + ( 1 | site), 
+                data = all_dat_veg, 
+                family = "gaussian")
+
+summary(divmod2)
+AICc(divmod)
+AICc(divmod2)
+
+divmod3<- glmmTMB(simpson.di ~ scale(EXPOSURE) + scale(Impervious) + scale(EFFECT) + ( 1 | site), 
+                data = all_dat_veg, 
+                family = "gaussian")
+
+AICc(divmod3)
+
+
+#### Plot 
+divgaus <- sjPlot::plot_model(divmod2, title = "Shannon diversity (mammals)",
+                             rm.terms = "season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]", 
+                            axis.title = "",
+                   show.values = TRUE, show.p = TRUE) + 
+  scale_color_sjplot("circus") 
+
+```
+
+
+
+
+Pielou's evenness  
+Using a gaussian 
+```{r cars}
+#### Model 
+
+all_dat_veg$evenness
+evenmod <- glmmTMB(evenness ~  develop + EXPOSURE + EFFECT  + 
+                  med_income +  ( 1 | site),
+                data = all_dat_veg, 
+                family = "gaussian")
+# does not converge
+
+evenmod2 <- glmmTMB(evenness ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + scale(med_income) + ( 1 | site),
+                data = all_dat_veg, 
+                family = "gaussian")
+summary(evenmod2)
+confint(richmod)
+
+AICc(richmod)
+AICc(evenmod2)
+
+#### Plot 
+evengauss <- sjPlot::plot_model(evenmod2, title = "Mammal community species evenness",
+                             rm.terms = "season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]", 
+                            axis.title = "",
+                   show.values = TRUE, show.p = TRUE) + 
+  scale_color_sjplot("circus") + 
+  scale_y_log10(limits = c(0.1, 10))
+
+```
+
+Beta diversity 
+```{r}
+
+
+```
+
+Plot all 
+```{r}
+
+# view all models 
+
+# table of species models 
+tab_model(coymod2, racmod2, oppmod2, deermod2, squirmod2, rabbmod2, 
+          collapse.ci = TRUE, 
+          p.style     = "numeric_stars",
+          rm.terms = c("season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]")
+          ) 
+?plot_models
+
+# Forest plot of species model estimates
+plot_models(coymod2, racmod2, oppmod2, deermod2, squirmod2, rabbmod2, show.values = T, grid = TRUE,
+            grid.breaks = c(.1,1,10),
+          p.shape     = "FALSE",
+         rm.terms = c("season [
+                            Winter19,Spring19, Summer19, 
+                             Fall19,Winter20]",
+                        "city [tawa]") 
+     #       transform = NULL
+        #     axis.lim = c(-0.1,100)
+          ) + 
+#    scale_y_log10(limits = c(-0.1, 100)) + 
+  scale_color_sjplot("hero")
+
+# table of richness and diversity 
+tab_model(richmod, divmod, evenmod,
+          collapse.ci = TRUE, 
+          p.style     = "numeric_stars",
+          rm.terms = c("season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]")
+          )
+
+
+# forest plot of richness and diversity estimates 
+plot_models(richmod, divmod, evenmod, show.values = T, 
+          p.shape     = "FALSE",
+          rm.terms = c("season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]",
+                       "city [tawa]"), grid = TRUE
+       #    axis.lim = c(1,30),
+          ) + 
+#   scale_y_log10(limits = c(0.1, 10)) + 
+  scale_color_sjplot("hero") 
+
+
+```
+
+
+
+Beta diversity 
+```{r}
+
+```
+

@@ -3,7 +3,6 @@
 library(data.table)
 library(sf)
 library(sp)
-library(igraph)
 library(dplyr)
 library(here)
 library(readr)
@@ -15,17 +14,17 @@ library(tidyr)
 se_caps <- read_csv("data/raw_data_from_uwin/SEWA_capturetimes.csv")
 se_meta <- read_csv("data/raw_data_from_uwin/SEWA_metadata.csv")
 se_counts <- read_csv("data/raw_data_from_uwin/SEWA_capturecounts.csv")
-head(se_caps)
-head(se_meta)
+se_smalls <- read_csv("data/raw_data_from_uwin/SEWA_squirrel+bunnytimes.csv")
 
-
+# group captures 
 se_caps <- se_caps %>% group_by(species, station, season) %>% summarize(count = n())
+se_smalls<- se_smalls %>% group_by(species, station, season) %>% summarize(count = n())
 
+# bind large and small mammal data
+se_caps <- rbind(se_caps, se_smalls)
 
+# join metadata and counts 
 se_counts <- left_join(se_caps, se_meta, by = c("station","season"))
-
-
-### change names from latin to common 
 
 
 #### tacoma data
@@ -45,8 +44,15 @@ unique(all_data$commonName)
 detections <- read_csv("data/raw_data_from_uwin/yasmine_samps.csv")
 
 # remove all sites with 0 days running from detection data
-detections <- detections[detections$J != 0, ]
+
 (unique(detections$Site))
+
+detections2 <- detections[detections$J != 0, ]
+
+(unique(detections2$Site))
+
+nrow(detections)
+nrow(detections2)
 
 # collapse data so each instance of city/location/season/species is a new column
 
@@ -78,7 +84,8 @@ colnames(ta_counts) <- c("species", "locationID", "city", "season",
                        "count", "Site", "long", "lat")
 
 head(ta_counts)
-################################################################################
+
+##############################################################
 ## removing/merging sites 
 
 
@@ -132,7 +139,40 @@ ta_counts$Site[ta_counts$Site == "G-KP"] <- "G-KP1"
 
 
 
+detections$Site[detections$Site == "P-TE2"] <- "P-TE1 " # keep
+detections$Site[detections$Site == "P-GW2"] <- "P-GW1" # keep
+detections$Site[detections$Site == "P-GW3"] <- "P-GW1" # keep
+detections$Site[detections$Site == "P-MKP3"] <- "P-MKP2" # keep
+detections$Site[detections$Site == "P-OV2"] <- "P-OV1" # keep
+detections$Site[detections$Site == "G-CBP2"] <- "G-CBP1" # keep
+detections$Site[detections$Site == "G-KP2"] <- "G-KP1" # keep
+detections$Site[detections$Site == "G-WLP2"] <- "G-WLP1" # keep
+detections$Site[detections$Site == "G-FN2"] <- "G-FN1" # keep
+detections$Site[detections$Site == "G-TNC2"] <- "G-TNC1" # keep
+detections$Site[detections$Site == "P-TE2"] <- "P-TE1"
+detections$Site[detections$Site == "G-KP"] <- "G-KP1"
 
+# there are a few more sites in the detection data set that need to be renamed 
+# pcna2 -- is pcna 1 in detection data 
+# scp2 is scp1
+# clp3 to clp2
+
+detections$Site[detections$Site == "P-PCNA1"] <- "P-PCNA2"
+detections$Site[detections$Site == "G-CLP2"] <- "G-CLP3"
+detections$Site[detections$Site == "P-SCP1"] <- "P-SCP2"
+
+
+
+# now we need to collapse the detection data to only keep rows without 0s 
+
+(unique(detections$Site))
+
+detections <- detections[detections$J != 0, ]
+
+(unique(detections3$Site))
+
+nrow(detections)
+nrow(detections3)
 
 
 # we will remove sites that don't have enough data in detection data
@@ -151,13 +191,15 @@ sites_count_only
 # G-AGC -- only one season of data 
 # G-KP1 -- needs to be merged with G-KP, kinda sparse data 
 # G-FN1 -- only 2 seasons
-# G-TCC1 -- 3 seasons, probs worth keeping
+# G-TCC1 -- 3 seasons, probs worth keeping but no detection ? can add manually later 
 
-# we'll remove G-AGC and G-FN1
+# we'll remove all of these for now since we need days active 
 
-ta_counts <- subset(ta_counts, Site != "G-AGC", 
-                      Site != "G-FN1")
-ta_counts
+
+ta_counts <- subset(ta_counts, Site != "G-AGC")
+ta_counts <- subset(ta_counts, Site != "G-FN1")
+ta_counts <- subset(ta_counts, Site != "G-TCC1")
+
 
 ################################################################################
 
@@ -168,19 +210,17 @@ ta_counts
 
 # change colnames to match dets 
 colnames(detections)
+colnames(ta_counts)
 colnames(ta_counts) <- c("species", "locationID", "city", "Season",
                          "count", "Site", "long", "lat")
 
 
 ta_counts <- ta_counts %>% left_join(detections[,c("Site", "Season", "J")], by = c("Site", "Season"))
 
+# this added a lot of repeats so only keep the first unique row of each 
+# season / site combo
 
-# this added a lot of repeats so only keep the first unique row of each repeat
-
-ta_counts <- ta_counts %>% distinct()
-
-# replace NAs with 0
-ta_counts$J <- ta_counts$J %>% replace_na(0)
+ta_counts <- ta_counts2 %>% distinct()
 
 
 # change all city into lowercase
@@ -208,14 +248,15 @@ head(ta_counts)
 
 ta_counts$species[ta_counts$species == "Mule deer"] <- "Black-tailed deer"
 
-# merge all rabbit to "Rabbit"
+# merge all rabbit
+ta_counts$species
 ta_counts$species[ta_counts$species == "Rabbit"] <- "Eastern cottontail rabbit"
 ta_counts$species[ta_counts$species == "Rabbit (cannot ID)"] <- "Eastern cottontail rabbit"
 
+
 #### 
 
-
-
+se_counts$species
 
 # reorder columns to match
 colnames(se_counts)
@@ -249,20 +290,14 @@ se_counts$species[se_counts$species == "Odocoileus hemionus"] <- "Black-tailed d
 se_counts$species[se_counts$species == "Procyon lotor"] <- "Raccoon"
 se_counts$species[se_counts$species == "Ursus americanus"] <- "Black bear"
 se_counts$species[se_counts$species == "Lontra canadensis"] <- "River otter"
-
+se_counts$species[se_counts$species == "Mephitis mephitis"] <- "Striped skunk"
+se_counts$species[se_counts$species == "Sylvilagus floridanus"] <- "Eastern cottontail rabbit"
+se_counts$species[se_counts$species == "Sciurus carolinensis"] <- "Eastern gray squirrel"
 
 # remove cat and dog from tacoma 
 
 ta_counts <- ta_counts %>% dplyr::filter(species != "Domestic dog", species != "Domestic cat")
 ta_counts$species
-
-# squirrel / rabbit 
-# se_counts$Species[ta_counts$Species == "Sylvilagus floridanus"] <- "Eastern cottontail rabbit"
-# new_dat$Species[new_dat$Species == "California Ground Squirrel"] <- "Squirrel"
-# new_dat$Species[new_dat$Species == "Douglas squirrel"] <- "Squirrel"
-# new_dat$Species[new_dat$Species == "Fox squirrel"] <- "Squirrel"
-# new_dat$Species[new_dat$Species == "Western gray squirrel"] <- "Squirrel"
-
 
 
 # merge data 

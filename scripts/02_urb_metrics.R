@@ -917,7 +917,9 @@ v17 <- load_variables(2019, "acs5", cache = TRUE)
 # for washington 
 tractincomeWA <- get_acs(state = "WA", 
                          geography = "tract", 
-                         variables = c(medincome="B19013_001"), geometry = TRUE)
+                         variables = c(medincome="B19013_001"),
+                         year = 2019, geometry = TRUE) # need to specify 2015-2019 data 
+# since acs now automatically calls 2017-2021 
 
 # cut out everything except king and pierce county from our WA shp 
 # specify dplyr because rgdal also has filter fxn 
@@ -1016,6 +1018,6 @@ colnames(data_export)
 
 
 ## export 
-write.csv(data_export, "data/covariates/sitecov_1000m_sewatawa_allsites.csv", row.names = FALSE)
+write.csv(data_export,  "data/covariates/sitecov_1000m_sewatawa_allsites.csv", row.names = FALSE)
 
 

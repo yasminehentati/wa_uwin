@@ -2,50 +2,29 @@
 ## ENVIRONMENTAL HEALTH DATA 
 # obtained from washington environmental health disparities map
 
-library(dplyr)
-library(sp)
-library(raster)
-library(here)
-library(sf)
-library(mapview)
+library(pacman)
+
+p_load(dplyr,sp,raster,here,sf,mapview,raster,remotes,tidycensus,
+       tidyr,terra,spatialEco,readr,ggfortify,exactextractr,spatstat,
+       spdep,landscapemetrics,tmap,viridis,gghighlight,purrr,plainview,tidyterra)
+
+
+
 # note that mapview is somewhat demanding, consider skipping
 # mapview functions if your computer is slow  - these are just used to check 
 # that shapefiles look correct 
-library(rgdal)
-library(raster)
-library(here)
-library(remotes)
-library(tidycensus)
-# remotes::install_github("walkerke/crsuggest") 
+
+remotes::install_github("walkerke/crsuggest") 
 library(crsuggest)
-library(tidyr)
-library(terra)
-install.packages("spatialEco")
-library(spatialEco)
-library(readr)
-library(ggfortify)
-library(rgeos)
-library(exactextractr)
-library(spatstat)   # for point pattern analysis
-library(spdep)      # for spatial autocorrelation
-library(landscapemetrics)    # for FRAGSTATS metrics
-library(tmap)
-library(viridis)
-library(gghighlight)
-library(purrr)
 
 ##
 ## read in data 
 
-# read in camera points 
-camdat <- st_read(here("data", "cameras", "points_wa.shp"))
-View(camdat)
-colnames(lead)
 
 # read in env health data 
 lead <- read_csv(here("data", "env_health_data", "Lead_Risk_from_Housing.csv"),
                  col_names=c("County_Name", "Census_Tract", "Units_Lead", "Total_Units", "Pct_Units_Lead", "IBL_Rank"))
-
+lead
 pm25 <- read_csv(here("data", "env_health_data", "PM2.5_Concentration.csv"), 
                  col_names=c("County_Name", "YearGroup", "Census_Tract", "PM2.5_Count", "IBL_Rank"))
 
@@ -91,10 +70,7 @@ envdat <- envdat %>% dplyr::filter(substr(Census_Tract, 1, 5)
 # rename census tract to geoid 
 envdat <- rename(envdat,c("GEOID" = "Census_Tract"))
 
-
-
-
-
+envdat$Pct_Units_Lead
 ## create polygons for env health data based on geoids 
 # we'll use the income data to do this 
 
@@ -104,19 +80,18 @@ tractsKP <- st_read(here("data", "income_maps", "seatac_urban_med_income.shp"))
 colnames(tractsKP)
 # merge env health data to polygons 
 
-envdatSP <- merge(tractsKP, envdat, by.x = "GEOID",
-                   by.y = "GEOID", all.x = TRUE) 
+# join based on GEOID 
+envdatSP <- merge(tractsKP, envdat, by = "GEOID") 
+envdatSP$Pct_Units_Lead
 
-
-
-# plot one of our variables to check 
+##### read in camera data so we have our points for the buffers 
 # same proj 
-camdat <- readOGR(dsn = "data/cameras/points_wa.shp") %>% spTransform(crs(tractsKP))
+camdat <- read_sf(dsn = "data/cameras/points_wa.shp") %>% 
+  na.omit() %>% 
+  st_transform(crs(tractsKP))
 
-library(plainview)
-mapview(camdat)
 mapview(list(camdat, envdatSP),
-        zcol = list(NULL, "Average_PNPL"))
+        zcol = list(NULL, "Pct_Units_Lead"))
 
 
 ########### transform polygon into raster for each variable
@@ -126,61 +101,58 @@ mapview(list(camdat, envdatSP),
 template <- rast(vect(envdatSP),res=0.005)
 
 lead_rast <- terra::rasterize(vect(envdatSP), template, field = "Pct_Units_Lead")
-class(lead_rast)
 
+class(lead_rast)
+crs(lead_rast)
+nrow(lead_rast)
 
 # reproject 
 lead_rast <- terra::project(lead_rast, "EPSG:32610")
 
-
-# is a spatraster, convert to raster 
-lead_rast <- raster(lead_rast)
-
 cam_env <- camdat %>%
-  spTransform(crs(lead_rast))
+  st_transform(crs(lead_rast))
 crs(lead_rast)
-sites <- cam_env
 
+sites <- vect(cam_env)
 
-plot(lead_rast,col=rainbow(100)); plot(camdat,col="blue", add = TRUE)
+plot(lead_rast,col=magma(100)); plot(sites,col="blue", add = TRUE)
 
 
 lead_dat <- data.frame(
-  sites@data,
-  "Pct_Units_Lead" = rep(NA, nrow(sites@data))
+   sites,
+  "Pct_Units_Lead" = rep(NA, nrow(sites))
 )
 
-i <- 1          # select the site
 buffer <- 1000   # choose the buffer size, in meters
-
-cam_env <- camdat %>%
-  spTransform(crs(lead_rast))
-
+length(lead_dat)
+nrow(lead_dat)
 # Takes about 8 minutes
 Sys.time()
+?buffer
 
-# calculate buffer 1000m around camera point 
-
-
-for(i in 1:length(sites)){
+# calculate buffer 1000m around camera point, calculate mean in buffer and 
+# assign to new data set 
+names(lead_dat)
+for(i in 1:nrow(sites)){
   pt <- sites[i,]                                         # select a point
-  buff <- gBuffer(pt, width = buffer, quadsegs = 25)      # create buffer around the point. This determines the size of the landscape
+  buff <- terra::buffer(pt, buffer, quadsegs = 25)    # create buffer around the point. This determines the size of the landscape
   
   lead <- lead_rast %>%
-    crop(extent(buff)) %>%
-    mask(buff)
+    terra::crop(ext(buff)) 
   
-  lead_dat$Pct_Units_Lead[i] <- extract(lead, buff, fun = mean, na.rm = TRUE)
+  lead_dat$Pct_Units_Lead[i] <- terra::extract(lead, buff, fun = mean, na.rm = TRUE)
   
   plot(lead); plot(pt, add = TRUE)
   print(i)
 }
+
+warnings()
 Sys.time()
 
 lead_dat <- lead_dat %>%
   dplyr::select(c(site, city, Pct_Units_Lead))
 lead_dat
-
+warnings()
 ########################## 2. PM2.5 
 
 pm25_rast <- terra::rasterize(vect(envdatSP), template, field = "PM2.5_Count")
@@ -188,15 +160,12 @@ pm25_rast <- terra::rasterize(vect(envdatSP), template, field = "PM2.5_Count")
 # reproject 
 pm25_rast <- terra::project(pm25_rast, "EPSG:32610")
 
-# is a spatraster, convert to raster 
-pm25_rast <- raster(pm25_rast)
 
 plot(pm25_rast,col=rainbow(100)); plot(camdat,col="blue", add = TRUE)
 
-
 pm25_dat <- data.frame(
-  sites@data,
-  "PM2.5_Count" = rep(NA, nrow(sites@data))
+  sites,
+  "PM2.5_Count" = rep(NA, nrow(sites))
 )
 
 i <- 1          # select the site
@@ -209,13 +178,13 @@ Sys.time()
 
 for(i in 1:length(sites)){
   pt <- sites[i,]                                         # select a point
-  buff <- gBuffer(pt, width = buffer, quadsegs = 25)      # create buffer around the point. This determines the size of the landscape
+  terra::buffer(x = pt, width = buffer, quadsegs = 25)       # create buffer around the point. This determines the size of the landscape
   
   pm25 <- pm25_rast %>%
-    crop(extent(buff)) %>%
+    crop(ext(buff)) %>%
     mask(buff)
   
-  pm25_dat$PM2.5_Count[i] <- extract(pm25, buff, fun = mean, na.rm = TRUE)
+  pm25_dat$PM2.5_Count[i] <- terra::extract(pm25, buff, fun = mean, na.rm = TRUE)
   
   plot(pm25); plot(pt, add = TRUE)
   print(i)
@@ -232,9 +201,6 @@ hazwaste_rast <- terra::rasterize(vect(envdatSP), template, field = "Average_PTS
 
 # reproject 
 hazwaste_rast <- terra::project(hazwaste_rast, "EPSG:32610")
-
-# is a spatraster, convert to raster 
-hazwaste_rast  <- raster(hazwaste_rast)
 
 plot(hazwaste_rast,col=rainbow(100)); plot(camdat,col="blue", add = TRUE)
 
@@ -254,13 +220,13 @@ Sys.time()
 
 for(i in 1:length(sites)){
   pt <- sites[i,]                                         # select a point
-  buff <- gBuffer(pt, width = buffer, quadsegs = 25)      # create buffer around the point. This determines the size of the landscape
+  terra::buffer(x = pt, width = buffer, quadsegs = 25)       # create buffer around the point. This determines the size of the landscape
   
   hazwaste <- hazwaste_rast %>%
-    crop(extent(buff)) %>%
+    crop(ext(buff)) %>%
     mask(buff)
   
-  hazwaste_dat$Average_PTSDF[i] <- extract(hazwaste, buff, fun = mean, na.rm = TRUE)
+  hazwaste_dat$Average_PTSDF[i] <- terra::extract(hazwaste, buff, fun = mean, na.rm = TRUE)
   
   plot(hazwaste); plot(pt, add = TRUE)
   print(i)
@@ -277,9 +243,6 @@ traffic_rast <- terra::rasterize(vect(envdatSP), template, field = "Prox_Heavy_T
 
 # reproject 
 traffic_rast <- terra::project(traffic_rast, "EPSG:32610")
-
-# is a spatraster, convert to raster 
-traffic_rast  <- raster(traffic_rast)
 
 plot(traffic_rast,col=rainbow(100)); plot(camdat,col="blue", add = TRUE)
 
@@ -299,13 +262,13 @@ Sys.time()
 
 for(i in 1:length(sites)){
   pt <- sites[i,]                                         # select a point
-  buff <- gBuffer(pt, width = buffer, quadsegs = 25)      # create buffer around the point. This determines the size of the landscape
+  terra::buffer(x = pt, width = buffer, quadsegs = 25)      # create buffer around the point. This determines the size of the landscape
   
   traffic <- traffic_rast %>%
-    crop(extent(buff)) %>%
+    crop(ext(buff)) %>%
     mask(buff)
   
-  traffic_dat$Prox_Heavy_Traffic_Roadways[i] <- extract(traffic, buff, fun = mean, na.rm = TRUE)
+  traffic_dat$Prox_Heavy_Traffic_Roadways[i] <- terra::extract(traffic, buff, fun = mean, na.rm = TRUE)
   
   plot(traffic); plot(pt, add = TRUE)
   print(i)
@@ -323,9 +286,6 @@ pnpl_rast <- terra::rasterize(vect(envdatSP), template, field = "Average_PNPL")
 
 # reproject 
 pnpl_rast <- terra::project(pnpl_rast, "EPSG:32610")
-
-# is a spatraster, convert to raster 
-pnpl_rast  <- raster(pnpl_rast)
 
 plot(pnpl_rast,col=rainbow(100)); plot(camdat,col="blue", add = TRUE)
 
@@ -345,13 +305,13 @@ Sys.time()
 
 for(i in 1:length(sites)){
   pt <- sites[i,]                                         # select a point
-  buff <- gBuffer(pt, width = buffer, quadsegs = 25)      # create buffer around the point. This determines the size of the landscape
+  terra::buffer(x = pt, width = buffer, quadsegs = 25)      # create buffer around the point. This determines the size of the landscape
   
   pnpl <- pnpl_rast %>%
     crop(extent(buff)) %>%
     mask(buff)
   
-  pnpl_dat$Average_PNPL[i] <- extract(pnpl, buff, fun = mean, na.rm = TRUE)
+  pnpl_dat$Average_PNPL[i] <- terra::extract(pnpl, buff, fun = mean, na.rm = TRUE)
   
   plot(pnpl); plot(pt, add = TRUE)
   print(i)
@@ -368,9 +328,6 @@ toxic_rast <- terra::rasterize(vect(envdatSP), template, field = "Average_RSEI_C
 
 # reproject 
 toxic_rast <- terra::project(toxic_rast, "EPSG:32610")
-
-# is a spatraster, convert to raster 
-toxic_rast  <- raster(toxic_rast)
 
 plot(toxic_rast,col=rainbow(100)); plot(camdat,col="blue", add = TRUE)
 
@@ -390,13 +347,13 @@ Sys.time()
 
 for(i in 1:length(sites)){
   pt <- sites[i,]                                         # select a point
-  buff <- gBuffer(pt, width = buffer, quadsegs = 25)      # create buffer around the point. This determines the size of the landscape
+  terra::buffer(x = pt, width = buffer, quadsegs = 25)       # create buffer around the point. This determines the size of the landscape
   
   toxic <- toxic_rast %>%
-    crop(extent(buff)) %>%
+    crop(ext(buff)) %>%
     mask(buff)
   
-  toxic_dat$Average_RSEI_Concentrations[i] <- extract(toxic, buff, fun = mean, na.rm = TRUE)
+  toxic_dat$Average_RSEI_Concentrations[i] <- terra::extract(toxic, buff, fun = mean, na.rm = TRUE)
   
   plot(toxic); plot(pt, add = TRUE)
   print(i)
@@ -414,11 +371,7 @@ water_rast <- terra::rasterize(vect(envdatSP), template, field = "Average_PWDIS"
 # reproject 
 water_rast <- terra::project(water_rast, "EPSG:32610")
 
-# is a spatraster, convert to raster 
-water_rast  <- raster(water_rast)
-
 plot(water_rast,col=rainbow(100)); plot(camdat,col="blue", add = TRUE)
-
 
 water_dat <- data.frame(
   sites@data,
@@ -435,13 +388,13 @@ Sys.time()
 
 for(i in 1:length(sites)){
   pt <- sites[i,]                                         # select a point
-  buff <- gBuffer(pt, width = buffer, quadsegs = 25)      # create buffer around the point. This determines the size of the landscape
+  terra::buffer(x = pt, width = buffer, quadsegs = 25)       # create buffer around the point. This determines the size of the landscape
   
   water <- water_rast %>%
     crop(extent(buff)) %>%
     mask(buff)
   
-  water_dat$Average_PWDIS[i] <- extract(water, buff, fun = mean, na.rm = TRUE)
+  water_dat$Average_PWDIS[i] <- terra::extract(water, buff, fun = mean, na.rm = TRUE)
   
   plot(water); plot(pt, add = TRUE)
   print(i)
@@ -504,9 +457,28 @@ pollutants <- pollutants %>%
 
 head(pollutants)
 
+# save just the GEOIDS and pollution data 
+
+
+
+
 # bring in urbanizatioon covariate data and merge 
 
 urbcovs <- read_csv(here("data", "covariates", "sitecov_1000m_sewatawa_allsites.csv"))
 
 all_covs <- left_join(urbcovs, pollutants, by = c("city", "site"), .keep_all = FALSE)
-View(all_covs)
+
+# write 
+# write_csv(all_covs, here("data", "covariates", "ALL_ENV_URB_SITES_1000m.csv"))
+
+
+
+# bind count data to covariate data 
+
+counts <- read_csv(here("data", "wa_counts.csv"))
+
+all_data <- left_join(counts, all_covs, by = c("city", "site"), .keep_all = FALSE)
+
+write_csv(all_data, here("data", "covariates", "COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
+
+
