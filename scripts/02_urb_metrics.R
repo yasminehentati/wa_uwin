@@ -66,7 +66,6 @@ st_write(points_wa, here("data", "cameras", "points_wa.shp"),
      append = FALSE)
 
 
-
 ################################################################################
 ## HOUSING DENSITY DATA 
 ## read in housing density  data - starting with WA 
@@ -146,8 +145,8 @@ for(i in 1:length(sites)){
   buff <- gBuffer(pt, width = buffer, quadsegs = 25)      # create buffer around the point. This determines the size of the landscape
   
   landscape <- is %>%
-    crop(extent(buff)) %>%
-    mask(buff)
+    raster::crop(extent(buff)) %>%
+    raster::mask(buff)
   
   is_us$Impervious[i] <- extract(landscape, buff, fun = mean, na.rm = TRUE)
   
@@ -1011,8 +1010,6 @@ length(match(unique(data_export$city_site),unique(is_all$city_site))) # make sur
 # Add the impervious surface percentage
 data_export$med_income <- med_inc$med_income
 colnames(data_export)
-
-
 
 
 

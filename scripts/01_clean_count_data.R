@@ -14,7 +14,7 @@ library(tidyr)
 se_caps <- read_csv("data/raw_data_from_uwin/SEWA_capturetimes.csv")
 se_meta <- read_csv("data/raw_data_from_uwin/SEWA_metadata.csv")
 se_counts <- read_csv("data/raw_data_from_uwin/SEWA_capturecounts.csv")
-se_smalls <- read_csv("data/raw_data_from_uwin/SEWA_squirrel+bunnytimes.csv")
+se_smalls <- read_csv("data/raw_data_from_uwin/SEWA_squirrel_bunny.csv")
 
 # group captures 
 se_caps <- se_caps %>% group_by(species, station, season) %>% summarize(count = n())
@@ -41,7 +41,7 @@ nrow(all_data)
 unique(all_data$commonName)
 
 # read in detection history data set
-detections <- read_csv("data/raw_data_from_uwin/yasmine_samps.csv")
+detections <- read_csv("data/raw_data_from_uwin/yasmine_samps_new.csv")
 
 # remove all sites with 0 days running from detection data
 
@@ -123,7 +123,7 @@ fix_site_names(new_dat_1)
 
 # this is based on the fix_site_names function 
 
-ta_counts$Site[ta_counts$Site == "P-TE2"] <- "P-TE1 " # keep
+ta_counts$Site[ta_counts$Site == "P-TE2"] <- "P-TE1" # keep
 ta_counts$Site[ta_counts$Site == "P-GW2"] <- "P-GW1" # keep
 ta_counts$Site[ta_counts$Site == "P-GW3"] <- "P-GW1" # keep
 ta_counts$Site[ta_counts$Site == "P-MKP3"] <- "P-MKP2" # keep
@@ -139,7 +139,7 @@ ta_counts$Site[ta_counts$Site == "G-KP"] <- "G-KP1"
 
 
 
-detections$Site[detections$Site == "P-TE2"] <- "P-TE1 " # keep
+detections$Site[detections$Site == "P-TE2"] <- "P-TE1" # keep
 detections$Site[detections$Site == "P-GW2"] <- "P-GW1" # keep
 detections$Site[detections$Site == "P-GW3"] <- "P-GW1" # keep
 detections$Site[detections$Site == "P-MKP3"] <- "P-MKP2" # keep
@@ -169,10 +169,7 @@ detections$Site[detections$Site == "P-SCP1"] <- "P-SCP2"
 
 detections <- detections[detections$J != 0, ]
 
-(unique(detections3$Site))
-
 nrow(detections)
-nrow(detections3)
 
 
 # we will remove sites that don't have enough data in detection data
@@ -201,6 +198,66 @@ ta_counts <- subset(ta_counts, Site != "G-FN1")
 ta_counts <- subset(ta_counts, Site != "G-TCC1")
 
 
+
+
+
+
+
+
+
+### merge seattle sites 
+
+
+
+
+
+
+# use mason's functions to collapse sites by location 
+head(se_counts)
+
+
+# add city column to seattle
+se_counts <- se_counts %>%
+  mutate(City = "sewa")
+
+
+# rename cols 
+colnames(se_counts) <- c("species", "Site", "season",
+                         "count",  "lat", "long", "days.active", "City")
+
+new_dat_1 <- qaqc_sites(x = se_counts, cities = "City", sites = "Site",
+                        my_coords=c("long","lat"), my_crs=4326)
+
+
+# this function will tell us what sites need to be merged or removed based
+# on proximity to the next site(s)
+# the "remove" process may not be totally accurate for this data set because it is 
+# made to keep the site with more data in an occupancy data set, but 
+# we have counts. for now we will keep these separate 
+
+fix_site_names(new_dat_1)
+
+# manually decide which sites to remove from count data after comparing 
+
+# merge  
+# BGP2, BGP1
+# MBC1, MBC2
+# MWP2, MWP1
+# LWP2, LWP3
+# BRF1, BRF2
+# PGP2, PGP1
+
+# this is based on the fix_site_names function 
+
+# rename accordingly 
+se_counts$Site[se_counts$Site == "BGP2"] <- "BGP1" # keep
+se_counts$Site[se_counts$Site == "MBC2"] <- "MBC1" # keep
+se_counts$Site[se_counts$Site == "MWP2"] <- "MWP1" # keep
+se_counts$Site[se_counts$Site == "LWP3"] <- "LWP2" # keep
+se_counts$Site[se_counts$Site == "BRF2"] <- "BRF1" # keep
+se_counts$Site[se_counts$Site == "PHY1"] <- "PHN1" # keep
+se_counts$Site[se_counts$Site == "PGP2"] <- "PGP1" # keep
+
 ################################################################################
 
 #### clean up / make data sets look the same 
@@ -220,7 +277,7 @@ ta_counts <- ta_counts %>% left_join(detections[,c("Site", "Season", "J")], by =
 # this added a lot of repeats so only keep the first unique row of each 
 # season / site combo
 
-ta_counts <- ta_counts2 %>% distinct()
+ta_counts <- ta_counts %>% distinct()
 
 
 # change all city into lowercase
@@ -231,9 +288,6 @@ colnames(ta_counts) <- c("species", "locationID", "city", "season",
                          "count", "site", "long", "lat", "days.active")
 head(ta_counts)
 
-# add city column to seattle
-se_counts <- se_counts %>%
-  mutate(City = "sewa")
 
 # rename cols 
 colnames(se_counts) <- c("species", "site", "season",
@@ -305,4 +359,3 @@ wa_counts <- rbind(ta_counts, se_counts)
 
 # save merged data
 write_csv(wa_counts, "data/wa_counts.csv")
-

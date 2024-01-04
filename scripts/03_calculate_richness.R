@@ -94,7 +94,7 @@ sitecovs <- read_csv(here("data", "covariates", "ALL_ENV_URB_SITES_1000m.csv"))
 
 vegandf <- left_join(vegandf, sitecovs, by = "site")
 
-# write_csv(vegandf, here("data", "covariates", "vegan_sites_all_covs.csv"))
+write_csv(vegandf, here("data", "covariates", "vegan_sites_all_covs.csv"))
 
 # bind wide counts to covariates 
 # add J as well 

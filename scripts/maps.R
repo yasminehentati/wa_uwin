@@ -261,3 +261,26 @@ mapview(wa_map)
 # re-project and crop 
 tractsKP <- st_transform(tractsKP, crs=4326)
 tractsKP_crop <- st_crop(tractsKP, c(xmin= -121.7, ymin = 46.7, xmax = -122.8, ymax = 47.8))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### 
+mapview(mapview(breweries, zcol = "founded", at = seq(1400, 2200, 200), legend = TRUE))
