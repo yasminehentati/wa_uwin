@@ -24,12 +24,15 @@ library(ggplot2)
 library(janitor)
 install.packages("lettercase")
 library(lettercase)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(here)
 
 # our new make names function
 make_names <- function(x) {
   gsub("\\.", "_", make.names(gsub("*.csv$", "", x)))
 }
-
 
 # read in count and covariate data 
 all_dat <- read_csv(here("data", "covariates", "WIDE_COUNTS_ALL_ENV_URB_SITES_1000m.csv")) %>%
@@ -160,6 +163,17 @@ coymod2 <- glmmTMB(Coyote ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFE
                 family = "nbinom2",
                 na.action = "na.fail")
 summary(coymod2)
+
+
+
+# interaction grouped model 
+coymodint <- glmmTMB(Coyote ~ city * scale(develop) + city * scale(EXPOSURE) + city * scale(EFFECT)  + 
+                     city * scale(med_income) + season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2",
+                na.action = "na.fail")
+summary(coymodint)
 
 
 # separate city models 
@@ -478,6 +492,17 @@ racmod2 <- glmmTMB(Raccoon ~ city + scale(develop) + scale(EXPOSURE) + scale(EFF
 summary(racmod2)
 
 
+
+# interaction grouped model 
+racmodint <- glmmTMB(Raccoon ~ city * scale(develop) + city * scale(EXPOSURE) + city * scale(EFFECT)  + 
+                     city * scale(med_income) + season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2",
+                na.action = "na.fail")
+summary(racmodint)
+
+
 # separate city models 
 
 racmod3a <- glmmTMB(Raccoon ~ scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
@@ -747,6 +772,15 @@ oppmod2 <- glmmTMB(Virginia_opossum ~ city + scale(develop) + scale(EXPOSURE) + 
                    na.action = "na.fail")
 summary(oppmod2)
 
+
+# interaction grouped model 
+oppmodint <- glmmTMB(Virginia_opossum ~ city * scale(develop) + city * scale(EXPOSURE) + city * scale(EFFECT)  + 
+                     city * scale(med_income) + season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2",
+                na.action = "na.fail")
+summary(oppmodint)
 
 # separate city models 
 
@@ -1255,6 +1289,17 @@ simpmod2 <- glmmTMB(simpson.di ~ city + scale(develop) + scale(EXPOSURE) + scale
                    na.action = "na.fail") 
 summary(simpmod2)
 
+
+
+# interaction grouped model
+simpmodint <- glmmTMB(simpson.di ~ city * scale(develop) + city * scale(EXPOSURE) + city * scale(EFFECT)  + 
+                     city * scale(med_income) +  ( 1 | site), 
+                   data = all_dat_veg, 
+                   family = "gaussian",
+                   na.action = "na.fail") 
+summary(simpmodint)
+
+
 # separate city models 
 
 simpmod3a <- glmmTMB(simpson.di ~ scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
@@ -1360,6 +1405,23 @@ tab_model(coymodglobal, racmodglobal, oppmodglobal,
                             Winter19,Winter20]")
           ) 
 
+# table of species interaction models 
+tab_model(coymodint, racmodint, oppmodint, 
+          collapse.ci = TRUE, 
+          p.style     = "numeric_stars",
+          rm.terms = c("season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]")
+          ) 
+
+tab_model(simpmodint,
+          collapse.ci = TRUE, 
+          p.style     = "numeric_stars",
+          rm.terms = c("season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]")
+          ) 
+
 
 # Forest plot of species model estimates 
 plot_models(coymodglobal, racmodglobal, oppmodglobal, title = "Both cities", show.values = T, grid = TRUE,
@@ -1400,6 +1462,26 @@ plot_models(coymod2, racmod2, oppmod2, title = "Both cities", show.values = T, g
   scale_color_sjplot("hero") + 
   scale_x_discrete(labels=c("Human development", "Env. exposures", "Env. effects", "Median income"),
                             limits = rev)
+
+
+
+
+
+# Forest plot of species model interaction estimates --grouped models
+plot_models(coymodint, racmodint, oppmodint, title = "Both cities", show.values = T, grid = TRUE,
+            grid.breaks = c(.1,1,10),
+          p.shape     = "FALSE",
+         rm.terms = c("season [
+                            Winter19,Spring19, Summer19, 
+                             Fall19,Winter20]",
+                        "city [tawa]") 
+     #       transform = NULL
+        #     axis.lim = c(-0.1,100)
+          ) + 
+#    scale_y_log10(limits = c(-0.1, 100)) + 
+  scale_color_sjplot("hero") + 
+ # scale_x_discrete(labels=c("Human development", "Env. exposures", "Env. effects", "Median income"),
+    #                        limits = rev)
 
 # table of richness and diversity 
 tab_model(richmod, divmod, evenmod,
