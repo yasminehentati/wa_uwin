@@ -9,12 +9,16 @@ library(sp)
 library(raster)
 library(here)
 library(sf)
+require(devtools)
+install.packages("Rtools")
+install_version("mapview", 
+                version = "2.11.0", 
+                repos = "http://cran.us.r-project.org")
 library(mapview)
  # note that mapview is somewhat demanding, consider skipping
 # mapview functions if your computer is slow  - these are just used to check 
 # that shapefiles look correct 
 library(rgdal)
-library(raster)
 library(here)
 library(remotes)
 library(tidycensus)
@@ -22,7 +26,6 @@ library(tidycensus)
 library(crsuggest)
 library(tidyr)
 library(terra)
-install.packages("spatialEco")
 library(spatialEco)
 library(readr)
 library(ggfortify)
@@ -34,6 +37,7 @@ library(landscapemetrics)    # for FRAGSTATS metrics
 library(tmap)
 library(viridis)
 library(gghighlight)
+library(dplyr)
 ##### get data from lat/long to utms 
 
 
@@ -62,28 +66,30 @@ points_wa <- all_sites %>% distinct(site, .keep_all = TRUE)
 # check that it looks ok
 mapview(points_wa)
 
-st_write(points_wa, here("data", "cameras", "points_wa.shp"),
-     append = FALSE)
+# st_write(points_wa, here("data", "cameras", "points_wa.shp"),
+  #    append = FALSE)
 
 
 ################################################################################
 ## HOUSING DENSITY DATA 
 ## read in housing density  data - starting with WA 
-# data from: ???
+# data from: Silvis lab https://silvis.forest.wisc.edu/data/housing-block-change/
+# Using 2020 data
 
 wa_housing <- st_read(here("data", "housing_maps", 
-                           "wa_blk10_Census_change_1990_2010_PLA2.shp"))
+                           "WA_block20_change_1990_2020_PLA4.shp"))
 
 # filter to only king and pierce county
-wa_housing <- wa_housing %>% dplyr::filter(substr(BLK10, 1, 5) 
+colnames(wa_housing)
+wa_housing <- wa_housing %>% dplyr::filter(substr(BLK20, 1, 5) 
                                            %in% c("53033", "53053"))
 
 # we only need 2010 housing data - select relevant info
 
 colnames(wa_housing)
-wa_housing <- wa_housing %>% dplyr::select(BLK10, WATER10, POP10, 
-                                           HU10, HUDEN10, HHUDEN10,
-                                           PUBFLAG:geometry)
+wa_housing <- wa_housing %>% dplyr::select(BLK20, WATER20, POP2020,
+                                           POPDEN2020, HUDEN2020,
+                                           Shape_Leng:geometry)
 colnames(wa_housing)
 
 # crop to actual study area 
@@ -93,8 +99,75 @@ wa_housing <- st_crop(wa_housing, c(xmin= -121.7, ymin = 46.7, xmax = -122.8, ym
 
 # mapview(wa_housing)
 
-#st_write(wa_housing, here("data", "housing_maps", "wa_urban_huden_2010.shp"),
-#    append = FALSE)
+st_write(wa_housing, here("data", "housing_maps", "wa_urban_huden_2020.shp"),
+    append = FALSE)
+
+
+# let's make all polygons with water (WATER20) NA so they don't get 
+# counted in the calculation (otherwise will show up at pop den 0)
+wa_housing <- wa_housing %>%
+  mutate(POPDEN2020 = ifelse(WATER20 == 1, NA, POPDEN2020))
+
+## transform polygon into raster 
+
+#### 1. Calculate population density
+template <- rast(vect(wa_housing),res=0.005)
+
+pop_rast <- terra::rasterize(vect(wa_housing), template, field = "POPDEN2020")
+class(pop_rast)
+
+
+# reproject 
+pop_rast <- terra::project(pop_rast, "EPSG:32610")
+
+
+# is a spatraster, convert to raster 
+pop_rast <- raster(pop_rast)
+
+points_wa <- readOGR(dsn = "data/cameras/points_wa.shp")
+
+sites <- points_wa %>%
+  spTransform(crs(pop_rast))
+crs(pop_rast)
+
+
+
+plot(pop_rast,col=rainbow(100)); plot(sites,col="blue", add = TRUE)
+
+
+pop_dat <- data.frame(
+  sites@data,
+  "pop_density" = rep(NA, nrow(sites@data))
+)
+
+i <- 1          # select the site
+buffer <- 1000   # choose the buffer size, in meters
+
+
+# Takes about 8 minutes
+Sys.time()
+
+# calculate buffer 1000m around camera point 
+
+
+for(i in 1:length(sites)){
+  pt <- sites[i,]                                         # select a point
+  buff <- gBuffer(pt, width = buffer, quadsegs = 25)      # create buffer around the point. This determines the size of the landscape
+  
+  popden <- pop_rast %>%
+    crop(extent(buff)) %>%
+    mask(buff)
+  
+  pop_dat$pop_density[i] <- extract(popden, buff, fun = mean, na.rm = TRUE)
+  
+  plot(popden); plot(pt, add = TRUE)
+  print(i)
+}
+Sys.time()
+
+pop_dat <- pop_dat %>%
+  dplyr::select(c(site, city, pop_density))
+pop_dat
 
 #########################
 # Landscape metrics / landcover 
@@ -499,7 +572,7 @@ print(sites[i,]$site)
 
 
 ########
-# now do ti for all 
+# now do it for all 
 start_time <- Sys.time()
 for(i in 1:nsite){
   pt <- sites[i,]                                         # select a point

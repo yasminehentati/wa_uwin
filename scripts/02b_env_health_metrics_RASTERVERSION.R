@@ -557,3 +557,21 @@ all_data <- left_join(counts, all_covs, by = c("city", "site"))
 write_csv(all_data, here("data", "covariates", "COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
 
 
+
+
+## do not run -- changes after adding housing density
+
+urbcovs <- read_csv(here("data", "covariates", "sitecov_1000m_sewatawa_allsites.csv"))
+colnames(urbcovs)
+urbcovs <- urbcovs %>% select(c(city, site, pop_density))
+
+all_covs <- read_csv(here("data", "covariates", "ALL_ENV_URB_SITES_1000m.csv"))
+all_covs <- left_join(all_covs, urbcovs, by = c("city", "site"))
+colnames(all_covs)
+write_csv(all_covs, here("data", "covariates", "ALL_ENV_URB_SITES_1000m.csv"))
+
+counts <- read_csv(here("data", "wa_counts.csv"))
+
+all_data <- left_join(counts, all_covs, by = c("city", "site"))
+
+write_csv(all_data, here("data", "covariates", "COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
