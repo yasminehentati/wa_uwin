@@ -108,6 +108,7 @@ st_write(wa_housing, here("data", "housing_maps", "wa_urban_huden_2020.shp"),
 wa_housing <- wa_housing %>%
   mutate(POPDEN2020 = ifelse(WATER20 == 1, NA, POPDEN2020))
 
+mapview(wa_housing)
 ## transform polygon into raster 
 
 #### 1. Calculate population density
@@ -1077,7 +1078,7 @@ med_inc$city_site <- paste(med_inc$city, med_inc$site, sep = "_")
 
 data_export <- data_export %>% arrange(city_site)
 med_inc <- med_inc %>% arrange(city_site)
-length(match(unique(data_export$city_site),unique(is_all$city_site))) # make sure all the sites match
+length(match(unique(data_export$city_site),unique(med_inc$city_site))) # make sure all the sites match
 
 
 # Add the impervious surface percentage
@@ -1085,7 +1086,16 @@ data_export$med_income <- med_inc$med_income
 colnames(data_export)
 
 
+#  add pop density to data export 
+data_export <- read_csv("data/covariates/sitecov_1000m_sewatawa_allsites.csv")
 
+# add city site 
+pop_dat$city_site <- paste(pop_dat$city, pop_dat$site, sep = "_")
+
+data_export <- data_export %>% arrange(city_site)
+pop_dat <- pop_dat %>% arrange(city_site)
+length(match(unique(data_export$city_site),unique(pop_dat$city_site))) # make sure all the sites match
+data_export$pop_density <- pop_dat$pop_density
 
 ## export 
 write.csv(data_export,  "data/covariates/sitecov_1000m_sewatawa_allsites.csv", row.names = FALSE)

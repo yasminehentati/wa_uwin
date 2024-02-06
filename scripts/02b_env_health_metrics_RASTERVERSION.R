@@ -87,6 +87,9 @@ colnames(tractsKP)
 envdatSP <- merge(tractsKP, envdat, by = "GEOID") 
 envdatSP$Pct_Units_Lead
 
+# write shapefile for our env health metrics 
+st_write(envdatSP, here("data", "env_health_data", "env_health_all_KP.shp"))
+
 ##### read in camera data so we have our points for the buffers 
 # same proj 
 
@@ -557,7 +560,7 @@ all_data <- left_join(counts, all_covs, by = c("city", "site"))
 write_csv(all_data, here("data", "covariates", "COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
 
 
-
+########## map 
 
 ## do not run -- changes after adding housing density
 

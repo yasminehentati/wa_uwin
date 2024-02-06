@@ -87,8 +87,20 @@ vegandf$evenness <- evenness
 
 write_csv(vegandf, here("data", "vegan_sites.csv"))
 
-# bind to covariates
 
+# jaccard dissimilarity
+# we want species in columns and sites in rows, so using wide version
+# need to convert data to binary 
+
+your_data <- your_data %>%
+  mutate_all(~ if_else(. != 0, 1, 0))
+
+
+
+##### Import results into data set 
+
+# bind to covariates
+glimpse(sitecovs)
 sitecovs <- read_csv(here("data", "covariates", "ALL_ENV_URB_SITES_1000m.csv"))
 
 
@@ -106,3 +118,5 @@ all_wide <- left_join(counts_all, sitecovs, by = c("city", "site")) %>%
   distinct() 
 
 write_csv(all_wide, here("data", "covariates", "WIDE_COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
+
+colnames(all_wide)

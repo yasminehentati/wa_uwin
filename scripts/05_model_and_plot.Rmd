@@ -105,7 +105,8 @@ cordat <- all_dat %>% distinct(site, .keep_all = TRUE) %>%
   dplyr::select(c(develop, 
                   EXPOSURE,
                   EFFECT, 
-                  med_income)) 
+                  med_income,
+                  pop_density)) 
 corr <- cor(cordat, method = "spearman", use="pairwise.complete.obs")
 corrplot(corr, method = "number")
 
@@ -113,6 +114,7 @@ corrplot(corr, method = "number")
 cordat <- all_dat %>% distinct(site, .keep_all = TRUE) %>% 
   dplyr::select(c(develop, 
                   med_income,
+                  pop_density,
                   Pct_Units_Lead, 
                   PM2.5_Count,
                   Average_PTSDF, 
@@ -145,7 +147,7 @@ coymodglobal <- glmmTMB(Coyote ~
                           scale(Average_PNPL) + 
                           scale(Average_RSEI_Concentrations) + 
                           scale(Average_PWDIS) + 
-                          scale(Annual_Tons_Km2_Diesel_NOx) + 
+                          scale(Annual_Tons_Km2_Diesel_NOx) + scale(pop_density) + 
                           season + 
                           ( 1 | site), 
                 data = all_dat, 
@@ -156,18 +158,25 @@ summary(coymodglobal)
 
 # Grouped exposures/effects model
 coymod2 <- glmmTMB(Coyote ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + ( 1 | site), 
+                     scale(med_income) + scale(pop_density) + season + ( 1 | site), 
                 data = all_dat, 
                 offset = log(days.active),
                 family = "nbinom2",
                 na.action = "na.fail")
 summary(coymod2)
 
-
+# Null model without the variable of interest
+coymodbase <- glmmTMB(Coyote ~ city + scale(develop) + 
+                     scale(med_income) + scale(pop_density) + season + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2",
+                na.action = "na.fail")
+summary(coymodbase)
 
 # interaction grouped model 
 coymodint <- glmmTMB(Coyote ~ city * scale(develop) + city * scale(EXPOSURE) + city * scale(EFFECT)  + 
-                     city * scale(med_income) + season + ( 1 | site), 
+                     city * scale(med_income) + season + scale(pop_density) + ( 1 | site), 
                 data = all_dat, 
                 offset = log(days.active),
                 family = "nbinom2",
@@ -178,13 +187,13 @@ summary(coymodint)
 # separate city models 
 
 coymod3a <- glmmTMB(Coyote ~ scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + ( 1 | site), 
+                     scale(med_income) + season + scale(pop_density)+ ( 1 | site), 
                 data = all_dat_sewa, 
                 offset = log(days.active),
                 family = "nbinom2")
 
 coymod3b <- glmmTMB(Coyote ~ scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + ( 1 | site), 
+                     scale(med_income) + season+ scale(pop_density) + ( 1 | site), 
                 data = all_dat_tawa, 
                 offset = log(days.active),
                 family = "nbinom2")
@@ -198,12 +207,12 @@ AICc(coymod3b)
 
 # Model dredging with dredge 
 
-stats::drop1(coymodglobal)
+# stats::drop1(coymodglobal)
 
 #coymod_dredge <- dredge(coymodglobal, trace = 2)
 #coymodglobal_dredge <- dredge(coymodglobal, fixed = c("season",
-                                                      "city",
-                                                      trace = 2))
+                                            #          "city",
+                                          #            trace = 2))
 #coymod2_dredge <- dredge(coymod2, trace = 2)
 
 
@@ -234,7 +243,7 @@ coymodexp <- glmmTMB(Coyote ~
                           scale(med_income) + 
                           scale(PM2.5_Count) + 
                           scale(Average_RSEI_Concentrations) + 
-                          scale(Annual_Tons_Km2_Diesel_NOx) + 
+                          scale(Annual_Tons_Km2_Diesel_NOx)+ scale(pop_density) + 
                           season + 
                           ( 1 | site), 
                 data = all_dat, 
@@ -251,7 +260,7 @@ coymodeff <- glmmTMB(Coyote ~
                           scale(Pct_Units_Lead) +
                           scale(Average_PTSDF) + 
                           scale(Average_PNPL) + 
-                          scale(Average_PWDIS) + 
+                          scale(Average_PWDIS) + scale(pop_density)+ 
                           season + 
                           ( 1 | site), 
                 data = all_dat, 
@@ -266,7 +275,7 @@ coymodlead <- glmmTMB(Coyote ~
                           city + 
                           scale(develop) + 
                            scale(med_income) + 
-                          scale(Pct_Units_Lead) +
+                          scale(Pct_Units_Lead) + scale(pop_density)+
                           season + 
                           ( 1 | site), 
                 data = all_dat, 
@@ -279,7 +288,7 @@ coymodpm <- glmmTMB(Coyote ~
                           city + 
                           scale(develop) + 
                            scale(med_income) + 
-                          scale(PM2.5_Count) +
+                          scale(PM2.5_Count) + scale(pop_density)+
                           season + 
                           ( 1 | site), 
                 data = all_dat, 
@@ -292,7 +301,7 @@ coymodtsdf <- glmmTMB(Coyote ~
                           city + 
                           scale(develop) + 
                            scale(med_income) + 
-                          scale(Average_PTSDF) +
+                          scale(Average_PTSDF)+ scale(pop_density) +
                           season + 
                           ( 1 | site), 
                 data = all_dat, 
@@ -305,7 +314,7 @@ coymodpnpl <- glmmTMB(Coyote ~
                           city + 
                           scale(develop) + 
                            scale(med_income) + 
-                          scale(Average_PNPL) + 
+                          scale(Average_PNPL)+ scale(pop_density) + 
                           season + 
                           ( 1 | site), 
                 data = all_dat, 
@@ -319,7 +328,7 @@ coymodrsei <- glmmTMB(Coyote ~
                           city + 
                           scale(develop) + 
                           scale(med_income) + 
-                          scale(Average_RSEI_Concentrations) + 
+                          scale(Average_RSEI_Concentrations)+ scale(pop_density) + 
                           season + 
                           ( 1 | site), 
                 data = all_dat, 
@@ -333,7 +342,7 @@ coymoddies <- glmmTMB(Coyote ~
                           city + 
                           scale(develop) + 
                            scale(med_income) + 
-                          scale(Annual_Tons_Km2_Diesel_NOx) + 
+                          scale(Annual_Tons_Km2_Diesel_NOx) + scale(pop_density)+ 
                           season + 
                           ( 1 | site), 
                 data = all_dat, 
@@ -349,7 +358,7 @@ coymodwater <- glmmTMB(Coyote ~
                           city + 
                           scale(develop) + 
                            scale(med_income) + 
-                          scale(Average_PWDIS) + 
+                          scale(Average_PWDIS)+ scale(pop_density) + 
                           season + 
                           ( 1 | site), 
                 data = all_dat, 
@@ -424,14 +433,16 @@ coyeffplot <- sjPlot::plot_model(coymodeff, title = "Top model: coyotes",
 
 
 coyeffplot
+
+
 # model diagnostics 
 simOut <- simulateResiduals(fittedModel = coymodglobal, plot = T)
 
 # looks like very slight underdispersion 
-testOutliers(coymod)
+testOutliers(coymodglobal)
 
 
-testDispersion(coymod) # again seeing underdispersion 
+testDispersion(coymodglobal) # again seeing underdispersion 
 
 testZeroInflation(coymodglobal) # test for zero-inflation -- In a model with variable dispersion, 
 # this is often the signal that some other distributional assumptions are violated, 
@@ -472,7 +483,7 @@ racmodglobal <- glmmTMB(Raccoon ~
                           scale(Average_PNPL) + 
                           scale(Average_RSEI_Concentrations) + 
                           scale(Average_PWDIS) + 
-                          scale(Annual_Tons_Km2_Diesel_NOx) + 
+                          scale(Annual_Tons_Km2_Diesel_NOx)+ scale(pop_density) + 
                           season + 
                           ( 1 | site), 
                         data = all_dat, 
@@ -483,7 +494,7 @@ summary(racmodglobal)
 
 # Grouped exposures/effects model
 racmod2 <- glmmTMB(Raccoon ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + ( 1 | site), 
+                     scale(med_income) + season + scale(pop_density)+ ( 1 | site), 
                    data = all_dat, 
                    offset = log(days.active),
                    family = "nbinom2",
@@ -494,7 +505,7 @@ summary(racmod2)
 
 # interaction grouped model 
 racmodint <- glmmTMB(Raccoon ~ city * scale(develop) + city * scale(EXPOSURE) + city * scale(EFFECT)  + 
-                     city * scale(med_income) + season + ( 1 | site), 
+                     city * scale(med_income) +  scale(pop_density) + season + ( 1 | site), 
                 data = all_dat, 
                 offset = log(days.active),
                 family = "nbinom2",
@@ -505,13 +516,13 @@ summary(racmodint)
 # separate city models 
 
 racmod3a <- glmmTMB(Raccoon ~ scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
-                         scale(med_income) + season + ( 1 | site), 
+                         scale(med_income) + season + scale(pop_density)+ ( 1 | site), 
                     data = all_dat_sewa, 
                     offset = log(days.active),
                     family = "nbinom2")
 
 racmod3b <- glmmTMB(Raccoon ~ scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
-                      scale(med_income) + season + ( 1 | site), 
+                      scale(med_income) + season + scale(pop_density)+ ( 1 | site), 
                     data = all_dat_tawa, 
                     offset = log(days.active),
                     family = "nbinom2")
@@ -531,7 +542,7 @@ racmodexp <- glmmTMB(Raccoon ~
                        scale(med_income) + 
                        scale(PM2.5_Count) + 
                        scale(Average_RSEI_Concentrations) + 
-                       scale(Annual_Tons_Km2_Diesel_NOx) + 
+                       scale(Annual_Tons_Km2_Diesel_NOx)+ scale(pop_density) + 
                        season + 
                        ( 1 | site), 
                      data = all_dat, 
@@ -548,7 +559,7 @@ racmodeff <- glmmTMB(Raccoon ~
                        scale(Pct_Units_Lead) +
                        scale(Average_PTSDF) + 
                        scale(Average_PNPL) + 
-                       scale(Average_PWDIS) + 
+                       scale(Average_PWDIS)+ scale(pop_density) + 
                        season + 
                        ( 1 | site), 
                      data = all_dat, 
@@ -563,7 +574,7 @@ racmodlead <- glmmTMB(Raccoon ~
                         city + 
                         scale(develop) + 
                         scale(med_income) + 
-                        scale(Pct_Units_Lead) +
+                        scale(Pct_Units_Lead) + scale(pop_density)+
                         season + 
                         ( 1 | site), 
                       data = all_dat, 
@@ -576,7 +587,7 @@ racmodpm <- glmmTMB(Raccoon ~
                       city + 
                       scale(develop) + 
                       scale(med_income) + 
-                      scale(PM2.5_Count) +
+                      scale(PM2.5_Count)+ scale(pop_density) +
                       season + 
                       ( 1 | site), 
                     data = all_dat, 
@@ -589,7 +600,7 @@ racmodtsdf <- glmmTMB(Raccoon ~
                         city + 
                         scale(develop) + 
                         scale(med_income) + 
-                        scale(Average_PTSDF) +
+                        scale(Average_PTSDF)+ scale(pop_density) +
                         season + 
                         ( 1 | site), 
                       data = all_dat, 
@@ -602,7 +613,7 @@ racmodpnpl <- glmmTMB(Raccoon ~
                         city + 
                         scale(develop) + 
                         scale(med_income) + 
-                        scale(Average_PNPL) + 
+                        scale(Average_PNPL)+ scale(pop_density) + 
                         season + 
                         ( 1 | site), 
                       data = all_dat, 
@@ -616,7 +627,7 @@ racmodrsei <- glmmTMB(Raccoon ~
                         city + 
                         scale(develop) + 
                         scale(med_income) + 
-                        scale(Average_RSEI_Concentrations) + 
+                        scale(Average_RSEI_Concentrations)+ scale(pop_density) + 
                         season + 
                         ( 1 | site), 
                       data = all_dat, 
@@ -630,7 +641,7 @@ racmoddies <- glmmTMB(Raccoon ~
                         city + 
                         scale(develop) + 
                         scale(med_income) + 
-                        scale(Annual_Tons_Km2_Diesel_NOx) + 
+                        scale(Annual_Tons_Km2_Diesel_NOx)+ scale(pop_density) + 
                         season + 
                         ( 1 | site), 
                       data = all_dat, 
@@ -646,7 +657,7 @@ racmodwater <- glmmTMB(Raccoon ~
                          city + 
                          scale(develop) + 
                          scale(med_income) + 
-                         scale(Average_PWDIS) + 
+                         scale(Average_PWDIS) + scale(pop_density)+ 
                          season + 
                          ( 1 | site), 
                        data = all_dat, 
@@ -703,7 +714,7 @@ write.csv(rac_tbl,"Rac mod sel table 12-22-23.csv", row.names = F)
 
 # Let's plot the top model 
 summary(racmodtsdf)
-racplot <- sjPlot::plot_model(racmodtsdf, title = "Top model: raccoons",
+racplot <- sjPlot::plot_model(racmod2, title = "Top model: raccoons",
                                  rm.terms = "season [Fall20,
                             Spring19, Spring20, Summer19, Summer20,
                             Winter19,Winter20]", 
@@ -717,14 +728,14 @@ racplot
 
 
 # modeldiagnostics 
-simOut <- simulateResiduals(fittedModel = racmod2, plot = T)
+simOut <- simulateResiduals(fittedModel = racmodglobal, plot = T)
 # deviations detected 
-testOutliers(racmod2)
+testOutliers(racmodglobal)
 
 
-testDispersion(racmod2) # again seeing underdispersion 
+testDispersion(racmodglobal) # again seeing underdispersion 
 
-testZeroInflation(racmod2) # test for zero-inflation -- In a model with variable dispersion, 
+testZeroInflation(racmodglobal) # test for zero-inflation -- In a model with variable dispersion, 
 # this is often the signal that some other distributional assumptions are violated, 
 # but not seeing zero-inflation so we can probably  move on with this model 
 
@@ -753,7 +764,7 @@ oppmodglobal <- glmmTMB(Virginia_opossum ~
                           scale(Average_PNPL) + 
                           scale(Average_RSEI_Concentrations) + 
                           scale(Average_PWDIS) + 
-                          scale(Annual_Tons_Km2_Diesel_NOx) + 
+                          scale(Annual_Tons_Km2_Diesel_NOx)+ scale(pop_density) + 
                           season + 
                           ( 1 | site), 
                         data = all_dat, 
@@ -764,7 +775,7 @@ summary(oppmodglobal)
 
 # Grouped exposures/effects model
 oppmod2 <- glmmTMB(Virginia_opossum ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + ( 1 | site), 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
                    data = all_dat, 
                    offset = log(days.active),
                    family = "nbinom2",
@@ -774,7 +785,7 @@ summary(oppmod2)
 
 # interaction grouped model 
 oppmodint <- glmmTMB(Virginia_opossum ~ city * scale(develop) + city * scale(EXPOSURE) + city * scale(EFFECT)  + 
-                     city * scale(med_income) + season + ( 1 | site), 
+                     city * scale(med_income) + season + scale(pop_density)+ ( 1 | site), 
                 data = all_dat, 
                 offset = log(days.active),
                 family = "nbinom2",
@@ -784,13 +795,13 @@ summary(oppmodint)
 # separate city models 
 
 oppmod3a <- glmmTMB(Virginia_opossum ~ scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
-                         scale(med_income) + season + ( 1 | site), 
+                         scale(med_income) + season + scale(pop_density)+ ( 1 | site), 
                     data = all_dat_sewa, 
                     offset = log(days.active),
                     family = "nbinom2")
 
 oppmod3b <- glmmTMB(Virginia_opossum ~ scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
-                      scale(med_income) + season + ( 1 | site), 
+                      scale(med_income) + season + scale(pop_density)+ ( 1 | site), 
                     data = all_dat_tawa, 
                     offset = log(days.active),
                     family = "nbinom2")
@@ -811,7 +822,7 @@ oppmodexp <- glmmTMB(Virginia_opossum ~
                        scale(PM2.5_Count) + 
                        scale(Average_RSEI_Concentrations) + 
                        scale(Annual_Tons_Km2_Diesel_NOx) + 
-                       season + 
+                       season+ scale(pop_density) + 
                        ( 1 | site), 
                      data = all_dat, 
                      offset = log(days.active),
@@ -827,7 +838,7 @@ oppmodeff <- glmmTMB(Virginia_opossum ~
                        scale(Pct_Units_Lead) +
                        scale(Average_PTSDF) + 
                        scale(Average_PNPL) + 
-                       scale(Average_PWDIS) + 
+                       scale(Average_PWDIS)+ scale(pop_density) + 
                        season + 
                        ( 1 | site), 
                      data = all_dat, 
@@ -846,7 +857,7 @@ oppmodglobal <- glmmTMB(Virginia_opossum ~
                           scale(Average_PNPL) + 
                           scale(Average_RSEI_Concentrations) + 
                           scale(Average_PWDIS) + 
-                          scale(Annual_Tons_Km2_Diesel_NOx) + 
+                          scale(Annual_Tons_Km2_Diesel_NOx)+ scale(pop_density) + 
                           season + 
                           ( 1 | site), 
                         data = all_dat, 
@@ -857,7 +868,7 @@ summary(racmodglobal)
 
 # Grouped exposures/effects model
 oppmod2 <- glmmTMB(Virginia_opossum ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + ( 1 | site), 
+                     scale(med_income) + season+ scale(pop_density) + ( 1 | site), 
                    data = all_dat, 
                    offset = log(days.active),
                    family = "nbinom2",
@@ -868,13 +879,13 @@ oppmod2 <- glmmTMB(Virginia_opossum ~ city + scale(develop) + scale(EXPOSURE) + 
 # separate city models 
 
 oppmod3a <- glmmTMB(Virginia_opossum ~ scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
-                         scale(med_income) + season + ( 1 | site), 
+                         scale(med_income) + season+ scale(pop_density) + ( 1 | site), 
                     data = all_dat_sewa, 
                     offset = log(days.active),
                     family = "nbinom2")
 
 oppmod3b <- glmmTMB(Virginia_opossum ~ scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
-                      scale(med_income) + season + ( 1 | site), 
+                      scale(med_income) + season+ scale(pop_density) + ( 1 | site), 
                     data = all_dat_tawa, 
                     offset = log(days.active),
                     family = "nbinom2")
@@ -894,7 +905,7 @@ oppmodexp <- glmmTMB(Virginia_opossum ~
                        scale(med_income) + 
                        scale(PM2.5_Count) + 
                        scale(Average_RSEI_Concentrations) + 
-                       scale(Annual_Tons_Km2_Diesel_NOx) + 
+                       scale(Annual_Tons_Km2_Diesel_NOx)+ scale(pop_density) + 
                        season + 
                        ( 1 | site), 
                      data = all_dat, 
@@ -911,7 +922,7 @@ oppmodeff <- glmmTMB(Virginia_opossum ~
                        scale(Pct_Units_Lead) +
                        scale(Average_PTSDF) + 
                        scale(Average_PNPL) + 
-                       scale(Average_PWDIS) + 
+                       scale(Average_PWDIS)+ scale(pop_density) + 
                        season + 
                        ( 1 | site), 
                      data = all_dat, 
@@ -926,7 +937,7 @@ oppmodlead <- glmmTMB(Virginia_opossum ~
                         city + 
                         scale(develop) + 
                         scale(med_income) + 
-                        scale(Pct_Units_Lead) +
+                        scale(Pct_Units_Lead)+ scale(pop_density) +
                         season + 
                         ( 1 | site), 
                       data = all_dat, 
@@ -939,7 +950,7 @@ oppmodpm <- glmmTMB(Virginia_opossum ~
                       city + 
                       scale(develop) + 
                       scale(med_income) + 
-                      scale(PM2.5_Count) +
+                      scale(PM2.5_Count) + scale(pop_density)+
                       season + 
                       ( 1 | site), 
                     data = all_dat, 
@@ -952,7 +963,7 @@ oppmodtsdf <- glmmTMB(Virginia_opossum ~
                         city + 
                         scale(develop) + 
                         scale(med_income) + 
-                        scale(Average_PTSDF) +
+                        scale(Average_PTSDF)+ scale(pop_density) +
                         season + 
                         ( 1 | site), 
                       data = all_dat, 
@@ -965,7 +976,7 @@ oppmodpnpl <- glmmTMB(Virginia_opossum ~
                         city + 
                         scale(develop) + 
                         scale(med_income) + 
-                        scale(Average_PNPL) + 
+                        scale(Average_PNPL)+ scale(pop_density) + 
                         season + 
                         ( 1 | site), 
                       data = all_dat, 
@@ -979,7 +990,7 @@ oppmodrsei <- glmmTMB(Virginia_opossum ~
                         city + 
                         scale(develop) + 
                         scale(med_income) + 
-                        scale(Average_RSEI_Concentrations) + 
+                        scale(Average_RSEI_Concentrations)+ scale(pop_density) + 
                         season + 
                         ( 1 | site), 
                       data = all_dat, 
@@ -993,7 +1004,7 @@ oppmoddies <- glmmTMB(Virginia_opossum ~
                         city + 
                         scale(develop) + 
                         scale(med_income) + 
-                        scale(Annual_Tons_Km2_Diesel_NOx) + 
+                        scale(Annual_Tons_Km2_Diesel_NOx)+ scale(pop_density) + 
                         season + 
                         ( 1 | site), 
                       data = all_dat, 
@@ -1009,7 +1020,7 @@ oppmodwater <- glmmTMB(Virginia_opossum ~
                          city + 
                          scale(develop) + 
                          scale(med_income) + 
-                         scale(Average_PWDIS) + 
+                         scale(Average_PWDIS)+ scale(pop_density) + 
                          season + 
                          ( 1 | site), 
                        data = all_dat, 
@@ -1107,158 +1118,6 @@ plotResiduals(simOut, all_dat$Environment1, quantreg = T)
 
 
 
-Deer models 
-Using a negative binomial because of overdispersion in the Poisson model 
-```{r cars}
-#### Model 
-
-# No deer in Seattle proper 
-
-sewadeer <- all_dat %>% subset(city == "sewa") %>% 
-  subset(Black_tailed_deer != 0)
-# still lots in seattle data tho 
-
-
-deermod <- glmmTMB(Black_tailed_deer ~ develop + EXPOSURE + EFFECT  + 
-                  med_income +  
-                  season + ( 1 | site), 
-                data = all_dat, 
-                offset = log(days.active),
-                family = "nbinom2")
-summary(deermod)
-confint(deermod)
-
-deermod2 <- glmmTMB(Black_tailed_deer ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + ( 1 | site), 
-                data = all_dat, 
-                offset = log(days.active),
-                family = "nbinom2")
-
-summary(deermod2)
-confint(deermod2)
-AICc(deermod2)
-AICc(deermod)
-
-#### Plot 
-deernb <- sjPlot::plot_model(deermod2, title = "Black-tailed deer",
-                             rm.terms = "season [Fall20,
-                            Spring19, Spring20, Summer19, Summer20,
-                            Winter19,Winter20]", 
-              #               axis.title = "",
-                   show.values = TRUE, show.p = TRUE) + 
-  scale_color_sjplot("circus") + 
-  scale_y_log10(limits = c(0.1, 100))
-
-```
-
-
-Squirrel models 
-Using a negative binomial because of overdispersion in the Poisson model 
-```{r cars}
-#### Model 
- 
-squirmod <- glmmTMB(Eastern_gray_squirrel ~ develop + EXPOSURE + EFFECT  + 
-                  med_income +  
-                  season + ( 1 | site), 
-                data = all_dat, 
-                offset = log(days.active),
-                family = "nbinom2")
-summary(squirmod)
-confint(squirmod)
-
-squirmod2 <- glmmTMB(Eastern_gray_squirrel ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + ( 1 | site), 
-                data = all_dat, 
-                offset = log(days.active),
-                family = "nbinom2")
-
-summary(squirmod2)
-
-#### Plot 
-squirnb <- sjPlot::plot_model(squirmod2, title = "Eastern gray squirrel",
-                             rm.terms = "season [Fall20,
-                            Spring19, Spring20, Summer19, Summer20,
-                            Winter19,Winter20]", 
-         #                    axis.title = "",
-                   show.values = TRUE, show.p = TRUE) + 
-  scale_color_sjplot("circus") + 
-  scale_y_log10(limits = c(0.1, 10))
-
-```
-
-
-Rabbit models 
-Using a negative binomial because of overdispersion in the Poisson model 
-```{r cars}
-#### Model 
- 
-rabbmod <- glmmTMB(Eastern_cottontail_rabbit ~ develop + EXPOSURE + EFFECT  + 
-                  med_income +  
-                  season + ( 1 | site), 
-                data = all_dat, 
-                offset = log(days.active),
-                family = "nbinom2")
-summary(rabbmod)
-confint(rabbmod)
-
-rabbmod2 <- glmmTMB(Eastern_cottontail_rabbit ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + ( 1 | site), 
-                data = all_dat, 
-                offset = log(days.active),
-                family = "nbinom2")
-
-summary(rabbmod2)
-confint(rabbmod2)
-AICc(rabbmod)
-AICc(rabbmod2)
-
-#### Plot 
-rabbnb <- sjPlot::plot_model(rabbmod2, title = "Eastern cottontail rabbit",
-                             rm.terms = "season [Fall20,
-                            Spring19, Spring20, Summer19, Summer20,
-                            Winter19,Winter20]", 
-            #                 axis.title = "",
-                   show.values = TRUE, show.p = TRUE) + 
-  scale_color_sjplot("circus") + 
-  scale_y_log10(limits = c(0.1, 10))
-
-```
-
-
-Richness model 
-Using a negative binomial because of overdispersion in the Poisson model 
-```{r cars}
-#### Model 
-glimpse(all_dat_veg)
-all_dat_veg$richness
-richmod <- glmmTMB(richness ~ develop + EXPOSURE + EFFECT  + 
-                  med_income +  ( 1 | site), 
-                data = all_dat_veg, 
-                family = "poisson")
-
-richmod2 <- glmmTMB(richness ~ city + scale(develop) + scale(EXPOSURE) + 
-                      scale(EFFECT)  + scale(med_income) + ( 1 | site), 
-                data = all_dat_veg, 
-                family = "poisson")
-summary(richmod)
-confint(richmod)
-
-summary(richmod2)
-AICc(richmod)
-AICc(richmod2)
-
-#### Plot 
-richpois <- sjPlot::plot_model(richmod2, title = "Mammal community species richness",
-                             rm.terms = "season [Fall20,
-                            Spring19, Spring20, Summer19, Summer20,
-                            Winter19,Winter20]", 
-                 #           axis.title = "",
-                   show.values = TRUE, show.p = TRUE) + 
-  scale_color_sjplot("circus") + 
-  scale_y_log10(limits = c(0.1, 10))
-
-```
-
 
 Simpson diversity model
 ```{r}
@@ -1282,7 +1141,8 @@ simpglobal <- glmmTMB(simpson.di ~
 
 # Grouped exposures/effects model
 simpmod2 <- glmmTMB(simpson.di ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) +  ( 1 | site), 
+                     scale(med_income) +
+                      scale(pop_density) + ( 1 | site), 
                    data = all_dat_veg, 
                    family = "gaussian",
                    na.action = "na.fail") 
@@ -1317,14 +1177,21 @@ simpmod3b <- glmmTMB(simpson.di ~ scale(develop) + scale(EXPOSURE) + scale(EFFEC
 
 # Let's plot the models
 
-simpmod2plot <- sjPlot::plot_model(simpmod2, title = "Simpsons diversity",, 
+simpmod2plot <- sjPlot::plot_model(simpmod2, title = "Simpson's diversity",  
                                  #                axis.title = "",
                                  show.values = TRUE, show.p = TRUE) + 
   scale_color_sjplot("circus") +     
   scale_x_discrete(labels=c("City [Tacoma]", "Human development",
                               "Env. exposure", "Env. effects", 
-                              "Median income"), limits = rev)
-simpmod2plot
+                              "Median income",  "Population density"), limits = rev)
+
+
+
+
+#### plot marginals 
+
+# coyote
+plot_model(coymod2, type = "pred", terms = c("EFFECT"))
 
 
 
@@ -1351,39 +1218,6 @@ simpmod3bplot
 
 
 
-
-Pielou's evenness  
-Using a gaussian 
-```{r cars}
-#### Model 
-
-all_dat_veg$evenness
-evenmod <- glmmTMB(evenness ~  develop + EXPOSURE + EFFECT  + 
-                  med_income +  ( 1 | site),
-                data = all_dat_veg, 
-                family = "gaussian")
-# does not converge
-
-evenmod2 <- glmmTMB(evenness ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + scale(med_income) + ( 1 | site),
-                data = all_dat_veg, 
-                family = "gaussian")
-summary(evenmod2)
-confint(richmod)
-
-AICc(richmod)
-AICc(evenmod2)
-
-#### Plot 
-evengauss <- sjPlot::plot_model(evenmod2, title = "Mammal community species evenness",
-                             rm.terms = "season [Fall20,
-                            Spring19, Spring20, Summer19, Summer20,
-                            Winter19,Winter20]", 
-                            axis.title = "",
-                   show.values = TRUE, show.p = TRUE) + 
-  scale_color_sjplot("circus") + 
-  scale_y_log10(limits = c(0.1, 10))
-
-```
 
 Beta diversity (Jaccard)
 ```{r}
@@ -1413,7 +1247,16 @@ tab_model(coymodint, racmodint, oppmodint,
                             Winter19,Winter20]")
           ) 
 
-tab_model(simpmodint,
+# table of species grouped models
+tab_model(coymod2, racmod2, oppmod2, 
+          collapse.ci = TRUE, 
+          p.style     = "numeric_stars",
+          rm.terms = c("season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]")
+          ) 
+
+tab_model(simpmod2,
           collapse.ci = TRUE, 
           p.style     = "numeric_stars",
           rm.terms = c("season [Fall20,
@@ -1443,24 +1286,23 @@ plot_models(coymodglobal, racmodglobal, oppmodglobal, title = "Both cities", sho
 
 
 
-
+sjplot(coymod2)
 
 
 # Forest plot of species model estimates --grouped models
-plot_models(coymod2, racmod2, oppmod2, title = "Both cities", show.values = T, grid = TRUE,
-            grid.breaks = c(.1,1,10),
+plot_models(coymod2, racmod2, oppmod2, title = "Both cities", show.values = T, grid = TRUE, vline.color = "gray",
+             grid.breaks = c(.1,1,10),
           p.shape     = "FALSE",
          rm.terms = c("season [
                             Winter19,Spring19, Summer19, 
-                             Fall19,Winter20]",
-                        "city [tawa]") 
+                             Fall19,Winter20]") , 
      #       transform = NULL
-        #     axis.lim = c(-0.1,100)
-          ) + 
+               axis.lim = c(0.1,100) 
+     )+ 
 #    scale_y_log10(limits = c(-0.1, 100)) + 
-  scale_color_sjplot("hero") + 
-  scale_x_discrete(labels=c("Human development", "Env. exposures", "Env. effects", "Median income"),
-                            limits = rev)
+  scale_color_sjplot("eight") + 
+  scale_x_discrete(labels=c("City [Tacoma]","Human development", "Env. exposures", "Env. effects", "Median income", "Population density"),
+                            limits = rev) 
 
 
 
@@ -1561,13 +1403,6 @@ plot_models(richmod, divmod, evenmod, show.values = T,
 #   scale_y_log10(limits = c(0.1, 10)) + 
   scale_color_sjplot("hero") 
 
-
-```
-
-
-
-Beta diversity 
-```{r}
 
 ```
 

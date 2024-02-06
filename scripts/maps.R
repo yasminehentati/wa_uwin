@@ -4,11 +4,13 @@
 # install.packages("pacman")
 # remotes::install_github("walkerke/crsuggest") 
 library(pacman)
-pacman::p_load(ggplot2, tidyr, dplyr, mapview, lme4, magrittr, lintr, sf, 
+pacman::p_load(extrafont, ggplot2, tidyr, dplyr, mapview, lme4, magrittr, lintr, sf, 
                raster, viridis, cowplot, markdown, sf, here, tidycensus,
                crsuggest, terra, spatialEco, readr, ggfortify, rgeos, usmap,
                rnaturalearth, rnaturalearthdata, maps, tools, stringr,
-               rmapshaper, cowplot, ggrepel, ggspatial, extrafont)
+               rmapshaper, cowplot, ggrepel, ggspatial)
+
+library(RColorBrewer)
 
 #### load in camera locations
 points <- st_read(here("data", "cameras", "points_wa.shp"))
@@ -48,7 +50,7 @@ wa_crop <- ms_erase(wa_map, water)
 
 mapview(wa_crop)
 
-# mapview(wa_crop) # for now we'll be lazy and manually erase the lines in the 
+ # for now we'll be lazy and manually erase the lines in the 
 # water (that line up with canadian borders) later
 
 
@@ -57,7 +59,6 @@ mapview(wa_crop)
 #                    city = c("Seattle", "Tacoma", 
 #                             "Olympia", "Port Angeles", "Everett"), 
 #                    lat = c(25.7616798, 
-library(ggplot2)
 
 # make the big map
 washington <- ggplot(data = wa_crop) +
@@ -70,13 +71,13 @@ washington <- ggplot(data = wa_crop) +
   # #     geom_text_repel(data = flcities, aes(x = lng, y = lat, label = city), 
   #                    fontface = "bold", nudge_x = c(1, -1.5, 2, 2, -1), nudge_y = c(0.25, 
   #                                                                                   -0.25, 0.5, 0.5, -0.5)) +
-  coord_sf(xlim = c(-123.5, -121.5), ylim = c(46.6, 48.5), expand = FALSE) +
+  coord_sf(xlim = c(-123.3, -121.6), ylim = c(46.6, 48.5), expand = FALSE) +
   xlab("Longitude")+ ylab("Latitude")+
   theme(panel.grid.major = element_blank(), panel.background = element_rect(fill = "#DCF0F5"), 
         panel.border = element_rect(fill = NA)) +     
   annotation_scale(location = "bl", width_hint = 0.4) +
   annotation_north_arrow(location = "bl", which_north = "true", 
-                         pad_x = unit(0.5, "in"), pad_y = unit(0.5, "in"),
+                         pad_x = unit(0.4, "in"), pad_y = unit(0.4, "in"),
                          style = north_arrow_fancy_orienteering) + 
   
   # add bounding boxes for study areas
@@ -88,7 +89,7 @@ washington <- ggplot(data = wa_crop) +
     ymax = 47.35,
     fill = NA, 
     colour = "red",
-    size = 1
+    linewidth = 1
   ) +
   
   # seattle 
@@ -99,8 +100,19 @@ washington <- ggplot(data = wa_crop) +
     ymax = 47.77,
     fill = NA, 
     colour = "red",
-    size = 1
-  )
+    linewidth = 1
+  ) + 
+  
+  # eatonville sites
+  geom_rect(
+    xmin = -122.2,
+    ymin = 46.89,
+    xmax = -122.3,
+    ymax = 46.95,
+    fill = NA, 
+    colour = "red",
+    linewidth = 1
+  ) 
 
 
 washington
@@ -108,33 +120,71 @@ washington
 tract_crop <- ms_erase(wa_tract, water)
 
 # read in shapefiles 
-tractsKP <- read_csv (here("data", "income_maps", "seatac_med_income.shp"))
-env_data
-env_WA_sp <- merge(tract_crop, env_data, by.x = "GEOID20",
-                   by.y = "GEOID", all.x = TRUE) 
 
-# crop to only king and pierce counties 
-env_WA_sp <- env_WA_sp %>% dplyr::filter(substr(GEOID20, 1, 5) 
-                                         %in% c("53033", "53053", # king pierce 
-                                                "53061", "53035", # snoho kitsap
-                                                "53029", "53057"))
+env_WA_sp <- st_read(here("data", "env_health_data", "env_health_all_KP.shp"))
 
-env_WA_sp
+
+colnames(env_WA_sp)
+#now lets make one big pollutant dataframe so we can create percentiles for our map 
+
+
+#create percentile for each metric. we'll use this to create the pollution burden score later
+
+pollutants <- st_as_sf(env_WA_sp) %>%
+  mutate(LEAD_PCT = ntile(env_WA_sp$Pct_U_L, 100)) %>%
+  mutate(PM25_PCT = ntile(env_WA_sp$PM2_5_C, 100)) %>%
+  mutate(HAZARD_PCT = ntile(env_WA_sp$A_PTSDF, 100)) %>%
+  mutate(TRAFFIC_PCT = ntile(env_WA_sp$P_H_T_R, 100)) %>%
+  mutate(PNPL_PCT = ntile(env_WA_sp$Av_PNPL, 100)) %>% 
+  mutate(TOXIC_PCT = ntile(env_WA_sp$A_RSEI_, 100)) %>% 
+  mutate(PWDIS_PCT = ntile(env_WA_sp$A_PWDIS, 100)) %>% 
+  mutate(DIESEL_PCT = ntile(env_WA_sp$ATK2DNO, 100)) 
+
+
+#CALCULATE OUR OWN POLLUTION BURDEN. We will follow WA Env Health Map Methods
+
+#first we need to average the exposures (pm25, diesel, toxic releases)
+# and environmental effects (cleanupsites, lead, gw threat, and hazards for us)
+
+pollutants <- pollutants %>%
+  mutate(EXPOSURE = (PM25_PCT + DIESEL_PCT +  TOXIC_PCT) / 3) %>%
+  # removing groundwater because therea re lots of NAs
+  mutate(EFFECT = (LEAD_PCT + HAZARD_PCT + PNPL_PCT) / 3) %>% 
+  #then we need to get the indicator for both. exposure stays the same by effects is given HALF weight. so multiply the EFFECTS COLUMN by .5
+  mutate(EFFECT = EFFECT * 0.5) %>% 
+  #BURDEN: now we sum the EXPOSURE AND EFFECT COLUMN (Pollution Burden is calculated as the average of its two component scores, with the Environmental Effects component halfweighted.)
+  mutate(BURDEN = EFFECT + EXPOSURE) %>% 
+  #THEN WE divide it by the weights. + (1 / .5)
+  mutate(BURDEN = BURDEN/1.5) %>% 
+  #then we want to scale it (0-10) so find the max and divide it by that number  
+  mutate(BURDEN_SCALED = (((BURDEN /max(BURDEN)) * 10))) %>% 
+  #then we can bin it as a percentile to help with scale
+  mutate(BURDEN_PERCENTILE = ntile(BURDEN_SCALED, 100))
+
+class(pollutants)
+pollutants$BURDEN_PERCENTILE
+
+## read in points 
+points_wa <- st_read(here("data", "cameras", "points_wa.shp"))
+
 ###########
 # make study site map - tacoma 
-TAWA <- ggplot(data = env_WA_sp) + 
+TAWA <- ggplot(data = pollutants) + 
   geom_sf(
-    aes(fill = Rank), 
+    aes(fill = BURDEN_PERCENTILE), 
     lwd = 0,
-    colour = "white") +
-  scale_fill_gradientn(
-    colors = c("#9DBF9E", "#FCB97D", "#A84268"),
+    colour = "lightgrey") +
+  scale_fill_distiller(
+    type = "seq",
+    aesthetics = "fill",
+    palette = "Reds",
+     direction = 1,
     na.value = "grey80",
-    limits = c(1, 10),
+  #    limits = factor(c(1, 100)),
     #   oob = scales::squish,
     #   labels = scales::percent,
-    name = "Environmental health \nexposures and effects") +
-  geom_sf(data = points_tawa, size = 2, shape = 23, fill = "darkred") +
+    name = "Environmental effects \nburden percentile") +
+  geom_sf(data = st_as_sf(points_wa), size = 2, shape = 23, fill = "black") +
   coord_sf(xlim = c(-122.58,-122.25), ylim= c(47.15,47.35), expand = FALSE) +
   annotate("text", x = -122.48, y = 47.32, label= "Tacoma", fontface = "bold",
            family = "Futura-Bold", size = 6) + 
@@ -157,22 +207,26 @@ TAWA <- ggplot(data = env_WA_sp) +
 TAWA
 
 
+?scale_color_brewer
 # make study site map - seattle 
 
-SEWA <- env_WA_sp %>% 
+
+SEWA <- pollutants %>% 
   ggplot() +
   geom_sf(
-    aes(fill = Rank), 
+    aes(fill = BURDEN_PERCENTILE), 
     lwd = 0,
-    colour = "white") +
-  scale_fill_gradientn(
-    colors = c("#9DBF9E", "#FCB97D", "#A84268"),
+    colour = "lightgrey") +
+  scale_fill_distiller(
+    type = "seq",
+    aesthetics = "fill",
+    palette = "Reds",
+    direction = 1,
     na.value = "grey80",
-    limits = c(1, 10),
-    #     oob = scales::squish,
+    #   oob = scales::squish,
     #   labels = scales::percent,
-    name = "Environmental health rankings") +
-  geom_sf(data = points_sewa, size =2, shape = 23, fill = "darkred") +
+    name = "Environmental health \nexposures and effects") + 
+  geom_sf(data = st_as_sf(points_wa), size =2, shape = 23, fill = "black") +
   coord_sf(xlim = c(-121.85,-122.54), ylim= c(47.36,47.77), expand = FALSE) + 
   annotate("text", x = -122.44, y = 47.61, label= "Seattle", 
            fontface = "bold", family = "Futura-Bold", size = 6) + 
@@ -220,7 +274,7 @@ ggdraw(xlim = c(0, 28), ylim = c(0, 20)) +
   draw_plot(legend, x = 25, y = 5, width = 2, height = 10) 
 
 
-
+?scale_color_brewer
 
 #############################################################################################
 ### GRAVEYARD - RIP  ### 
