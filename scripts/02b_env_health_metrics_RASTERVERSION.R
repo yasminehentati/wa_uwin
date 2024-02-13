@@ -8,7 +8,7 @@ p_load(dplyr,sp,raster,here,sf,mapview,raster,remotes,tidycensus,
        tidyr,terra,spatialEco,readr,ggfortify,exactextractr,spatstat,
        spdep,landscapemetrics,tmap,viridis,gghighlight,purrr,plainview,tidyterra)
 
-
+# hello schell lab 
 
 # note that mapview is somewhat demanding, consider skipping
 # mapview functions if your computer is slow  - these are just used to check 
