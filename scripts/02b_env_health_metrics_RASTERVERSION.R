@@ -560,21 +560,24 @@ all_data <- left_join(counts, all_covs, by = c("city", "site"))
 write_csv(all_data, here("data", "covariates", "COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
 
 
-########## map 
+########## 
 
-## do not run -- changes after adding housing density
-
-urbcovs <- read_csv(here("data", "covariates", "sitecov_1000m_sewatawa_allsites.csv"))
+## do not run -- only if adding a covariate in 02a
+library(here)
+library(readr)
+install.packages("conflicted")
+library(conflicted)
+urbcovs <- read_csv(here::here("data", "covariates", "sitecov_1000m_sewatawa_allsites.csv"))
 colnames(urbcovs)
-urbcovs <- urbcovs %>% select(c(city, site, pop_density))
+urbcovs <- urbcovs %>% dplyr::select(c(city, site, prop_veg_5:prop_veg_avg))
 
-all_covs <- read_csv(here("data", "covariates", "ALL_ENV_URB_SITES_1000m.csv"))
+all_covs <- read_csv(here::here("data", "covariates", "ALL_ENV_URB_SITES_1000m.csv"))
 all_covs <- left_join(all_covs, urbcovs, by = c("city", "site"))
 colnames(all_covs)
-write_csv(all_covs, here("data", "covariates", "ALL_ENV_URB_SITES_1000m.csv"))
+write_csv(all_covs, here::here("data", "covariates", "ALL_ENV_URB_SITES_1000m.csv"))
 
-counts <- read_csv(here("data", "wa_counts.csv"))
+counts <- read_csv(here::here("data", "wa_counts.csv"))
 
 all_data <- left_join(counts, all_covs, by = c("city", "site"))
 
-write_csv(all_data, here("data", "covariates", "COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
+write_csv(all_data, here::here("data", "covariates", "COUNTS_ALL_ENV_URB_SITES_1000m.csv"))

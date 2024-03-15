@@ -1087,7 +1087,6 @@ med_inc <- med_inc %>% arrange(city_site)
 length(match(unique(data_export$city_site),unique(med_inc$city_site))) # make sure all the sites match
 
 
-
 ################################################
 # NDVI
 
@@ -1098,9 +1097,6 @@ length(match(unique(data_export$city_site),unique(med_inc$city_site))) # make su
 
 # NDVI Extraction code from Travis Gallo
 
-data_export <- read_csv("data/covariates/sitecov_1000m_sewatawa_allsites.csv")
-
-plot(ndvi_kp)
 # load LandSat NDVI raster from GRC GEE code 
 
 ndvi_kp <- raster(here("data", "NDVI_data", "NDVI2020SEWATAWA3038_1.tif"))
@@ -1116,22 +1112,59 @@ points_wa <- st_transform(points_wa, crs = st_crs(ndvi_kp))
 ndvi_extract <- raster::extract(ndvi_kp, points_wa, buffer = 1000)
 
 # calculate the proportion of a site that is covered in vegetation
-prop_ndvi_greater0.2 <- lapply(ndvi_extract, function (x){
+prop_ndvi_greater0.5 <- lapply(ndvi_extract, function (x){
+  # turn values greater than 0.5 to 1 (these are cells that are covered in vegetation)
+  x[which(x > 0.5)] <- 1
+  # turn values less than 0.5 to 0 (these are cells that are not vegetation)
+  x[which(x <= 0.5)] <- 0
+  # proportion of cells that are vegetation
+  sum(x, na.rm = TRUE)/length(x) })
+
+
+# turn list into a vector
+prop_veg_5 <- do.call(c, prop_ndvi_greater0.5)
+prop_veg_5
+
+# add to points_wa
+points_wa$prop_veg_5 <- prop_veg_5
+
+# calculate the proportion of a site that is covered in vegetation
+prop_ndvi_greater0.6 <- lapply(ndvi_extract, function (x){
   # turn values greater than 0.6 to 1 (these are cells that are covered in vegetation)
   x[which(x > 0.6)] <- 1
-  # turn values less than 0.5 to 0 (these are cells that are not vegetation)
+  # turn values less than 0.6 to 0 (these are cells that are not vegetation)
   x[which(x <= 0.6)] <- 0
   # proportion of cells that are vegetation
   sum(x, na.rm = TRUE)/length(x) })
 
 
 # turn list into a vector
-prop_veg <- do.call(c, prop_ndvi_greater0.2)
-prop_veg
+prop_veg_6 <- do.call(c, prop_ndvi_greater0.6)
+prop_veg_6
 
 # add to points_wa
-points_wa$prop_veg <- prop_veg
+points_wa$prop_veg_6 <- prop_veg_6
 
+
+
+# calculate the proportion of a site that is covered in vegetation
+prop_ndvi_avg <- lapply(ndvi_extract, function (x){
+  mean(x) 
+  })
+
+
+# turn list into a vector
+prop_veg_avg <- do.call(c, prop_ndvi_avg)
+prop_veg_avg
+
+# add to points_wa
+points_wa$prop_veg_avg <- prop_veg_avg
+
+
+#### Next few lines are done to add NDVI to the existing covariates file
+# without having to rerun all the code, 3/15/24
+
+data_export <- read_csv("data/covariates/sitecov_1000m_sewatawa_allsites.csv")
 
 # rearrange points_wa and data_export to match 
 
@@ -1144,7 +1177,10 @@ points_wa$city_site <- paste(points_wa$city, points_wa$site, sep = "_")
 points_wa <- points_wa %>% arrange(city_site)
 
 
-data_export$prop_veg <- points_wa$prop_veg
+data_export$prop_veg_5 <- points_wa$prop_veg_5
+data_export$prop_veg_6 <- points_wa$prop_veg_6
+data_export$prop_veg_avg <- points_wa$prop_veg_avg
+
 
 # Add the impervious surface percentage
 data_export$med_income <- med_inc$med_income
