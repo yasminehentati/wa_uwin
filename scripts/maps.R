@@ -10,6 +10,7 @@ pacman::p_load(extrafont, ggplot2, tidyr, dplyr, mapview, lme4, magrittr, lintr,
                rnaturalearth, rnaturalearthdata, maps, tools, stringr,
                rmapshaper, cowplot, ggrepel, ggspatial)
 
+library(usmap)
 library(RColorBrewer)
 
 #### load in camera locations
@@ -22,11 +23,12 @@ wa_map <- st_read(here("data", "figure_data", "tl_2016_53_cousub.shp"))
 wa_tract <- st_read(here("data", "figure_data", "tract20.shp"))
 
 wa_map <- wa_map %>%  st_transform(crs = 4326) %>% 
-  st_crop(c(xmin = -125.5, xmax = -121, ymin = 46.5, ymax = 49))
+  st_crop(c(xmin = -125.5, xmax = -116, ymin = 46.5, ymax = 49))
 
 wa_tract <- wa_tract %>%  st_transform(crs = 4326) %>% 
-  st_crop(c(xmin = -125.5, xmax = -121, ymin = 46.5, ymax = 49))
+  st_crop(c(xmin = -125.5, xmax = -116, ymin = 46.5, ymax = 49))
 
+mapview(wa_map)
 # add water
 water <- st_read(here("data", "figure_data", 
                       "DNR_Hydrography_-_Water_Bodies_-_Forest_Practices_Regulation.shp")) 
@@ -35,9 +37,7 @@ sf_use_s2(FALSE)
 
 # crop to our map area 
 water <-  water %>% st_transform(crs = 4326) %>% 
-  st_crop(c(xmin = -125.5, xmax = -121, ymin = 46.5, ymax = 49))
-
-
+  st_crop(c(xmin = -125.5, xmax = -117, ymin = 46.5, ymax = 49))
 
 # let's put everything in the same proj 
 
@@ -48,30 +48,62 @@ st_crs(water) == st_crs(wa_map)
 
 wa_crop <- ms_erase(wa_map, water)
 
-mapview(wa_crop)
 
  # for now we'll be lazy and manually erase the lines in the 
 # water (that line up with canadian borders) later
 
 
 # add cities 
-# wacities <- data.frame(state = rep("Washington", 5), 
-#                    city = c("Seattle", "Tacoma", 
-#                             "Olympia", "Port Angeles", "Everett"), 
-#                    lat = c(25.7616798, 
+wacities <- data.frame(state = rep("Washington", 5), 
+                       city = c("Seattle", "Tacoma", 
+                                "Olympia", "Everett", "Port Angeles"), 
+                       lat = c(47.610787,47.244942,47.035126,47.977598,
+                               48.117657),
+                       long = c(-122.321388,-122.454775,-122.898329,
+                                -122.216018,-123.431504))
+                       
+# add US map
 
-# make the big map
+usmap <- plot_usmap(exclude = c("Alaska", "Hawaii"),
+           fill = "antiquewhite4")  + 
+ geom_rect(
+    xmin =353719.05,
+    ymin = 5149724.79,
+    xmax = 461634.08,
+    ymax = 5429382.98,
+    fill = NA, 
+    colour = "red",
+    linewidth = 1
+  )
+usmap
+
+  # study area bounding box 
+?ne_countries
+usmap <- plot(ne_countries(country = "United States of America",
+                             type = "states")) + 
+  usmap_transform(geom_rect(
+    xmin = -123.5,
+    ymin = 46.5,
+    xmax = -119,
+    ymax = 49,
+    fill = NA, 
+    colour = "red",
+    linewidth = 1
+  )) + 
+  coord_sf(crs = st_crs(water))
+?plot_usmap
+
+?plot_usmap
+# make the big WA map
 washington <- ggplot(data = wa_crop) +
   geom_sf(fill = "antiquewhite4", color = NA) +
   #      geom_sf(data = water, fill = "alice blue", color = gray(.2)) + 
   #      geom_sf(data = points_tawa, size = 1, shape = 23, fill = "darkred") +
   #     annotate(geom = "text", x = -85.5, y = 27.5, label = "Gulf of Mexico", 
   #           color = "grey22", size = 4.5) +
-  #     geom_sf(data = wacities) +
-  # #     geom_text_repel(data = flcities, aes(x = lng, y = lat, label = city), 
-  #                    fontface = "bold", nudge_x = c(1, -1.5, 2, 2, -1), nudge_y = c(0.25, 
-  #                                                                                   -0.25, 0.5, 0.5, -0.5)) +
-  coord_sf(xlim = c(-123.3, -121.6), ylim = c(46.6, 48.5), expand = FALSE) +
+       geom_text_repel(data = wacities, aes(x = long, y = lat, label = city), 
+                      fontface = "bold", nudge_x = c(0.1, 0.2, -.1,.1,0), nudge_y = c(-0.1, -0.1, -0.1,.1,.1)) +
+  coord_sf(xlim = c(-123.5, -119), ylim = c(46.5, 49), expand = FALSE) +
   xlab("Longitude")+ ylab("Latitude")+
   theme(panel.grid.major = element_blank(), panel.background = element_rect(fill = "#DCF0F5"), 
         panel.border = element_rect(fill = NA)) +     
@@ -114,8 +146,8 @@ washington <- ggplot(data = wa_crop) +
     linewidth = 1
   ) 
 
-
 washington
+
 # clip tract shapefile to water 
 tract_crop <- ms_erase(wa_tract, water)
 
@@ -239,11 +271,6 @@ SEWA <- pollutants %>%
 
 SEWA
 
-# create arrows for bigger map 
-arrowA <- data.frame(x1 = 11, x2 = 16, y1 = 10.5, y2 = 14.5)
-arrowB <- data.frame(x1 = 8.5, x2 = 15, y1 = 7.5, y2 = 5.5)
-
-
 
 # get the legend 
 
@@ -257,24 +284,31 @@ legend <- get_legend(
       legend.title = element_text(family = "Futura-Bold", size = 10),
       legend.text = element_text(family = "Futura-Medium", size = 10)) + 
     theme(
-      legend.direction="vertical")
+      legend.direction="horizontal")
 ) 
 
 
+                       
 set_null_device("png")
 
-ggdraw(xlim = c(0, 28), ylim = c(0, 20)) +
-  draw_plot(washington, x = 0, y = 0, width = 13, height = 20) +
-  draw_plot(SEWA, x = 13, y = 10, width = 12, height = 10) +
-  draw_plot(TAWA, x = 13, y = 0, width = 12, height = 10) +
-  geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2), data = arrowA, 
-               arrow = arrow(), lineend = "round") +
-  geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2), data = arrowB, 
-               arrow = arrow(), lineend = "round") +  
-  draw_plot(legend, x = 25, y = 5, width = 2, height = 10) 
+
+# create arrows for bigger map 
+arrowA <- data.frame(x1 = 11, x2 = 16, y1 = 10.5, y2 = 14.5)
+arrowB <- data.frame(x1 = 8.5, x2 = 15, y1 = 7.5, y2 = 5.5)
 
 
-?scale_color_brewer
+# final plot 
+ggdraw(xlim = c(0, 28), ylim = c(0, 30)) +
+  draw_plot(washington, x = 0, y = 2.5, width = 25, height = 25) +
+  draw_plot(SEWA, x = 13, y = 15.75, width = 11, height = 11) +
+  draw_plot(TAWA, x = 13, y = 4.5, width = 11, height = 11) +
+  draw_plot(usmap, x = 3, y = 0, width = 4, height = 3) + 
+#  geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2), data = arrowA, 
+  #             arrow = arrow(), lineend = "round") +
+ # geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2), data = arrowB, 
+ #              arrow = arrow(), lineend = "round") +  
+  draw_plot(legend, x = 14, y = 0, width = 2, height = 2) 
+
 
 #############################################################################################
 ### GRAVEYARD - RIP  ### 
