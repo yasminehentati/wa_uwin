@@ -100,7 +100,7 @@ your_data <- your_data %>%
 ##### Import results into data set 
 
 # bind to covariates
-glimpse(sitecovs)
+
 sitecovs <- read_csv(here("data", "covariates", "ALL_ENV_URB_SITES_1000m.csv"))
 
 

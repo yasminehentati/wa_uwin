@@ -92,29 +92,35 @@ glimpse(all_dat)
 # get city specific data set - vegan
 all_dat_tawa_veg  <- all_dat_veg %>% dplyr::filter(city == "tawa")
 all_dat_sewa_veg  <- all_dat_veg %>% dplyr::filter(city == "sewa")
-
+colnames(all_dat)
 
 # look at pollution burden distributions
-ggplot(all_dat, aes(x = BURDEN_PERCENTILE)) +
+burden_plot <- all_dat %>% distinct(site, .keep_all = TRUE) %>%
+  ggplot(aes(x = BURDEN_PERCENTILE)) +
   geom_histogram(fill = "white", colour = "black") +
   facet_grid(city ~ .)
 
 colnames(all_dat)
-# look at correlations 
-cordat <- all_dat %>% distinct(site, .keep_all = TRUE) %>%
-  dplyr::select(c(develop, 
-                  EXPOSURE,
-                  EFFECT, 
-                  med_income,
-                  pop_density)) 
-corr <- cor(cordat, method = "spearman", use="pairwise.complete.obs")
-corrplot(corr, method = "number")
+all_dat %>% distinct(site, .keep_all = TRUE) %>% 
+  ggplot(aes(x = Impervious, y = prop_veg_avg)) +
+  geom_point(color = "blue") +  # Set point color
+  labs(x = "impervious", y = "NDVI") 
 
+all_dat %>% distinct(site, .keep_all = TRUE) %>%
+  ggplot(aes(x = prop_veg_avg)) +
+  geom_point(x = site, y = prop) +
+  facet_grid(city ~ .)
+?geom_point
+develop <- all_dat %>% distinct(site, .keep_all = TRUE) %>%
+  ggplot(aes(x = develop)) +
+  geom_histogram(fill = "white", colour = "black") +
+  facet_grid(city ~ .)
 
 cordat <- all_dat %>% distinct(site, .keep_all = TRUE) %>% 
   dplyr::select(c(develop, 
                   med_income,
-                  pop_density,
+                  prop_veg_avg,
+                  pop_density.x,
                   Pct_Units_Lead, 
                   PM2.5_Count,
                   Average_PTSDF, 
@@ -128,6 +134,36 @@ corrplot(corr, method = "number")
 
 # all below 0.7 -- good 
 
+#### look at correlations -- by city
+
+library(Hmisc) # this package has implemented a cor function calculating both r and p.  
+
+colnames(all_dat)
+
+iris[,1:4]
+B <- split(iris[,1:4], iris$Species)
+
+# split the data 
+B <- all_dat %>% distinct(site, .keep_all=TRUE) %>% dplyr::select(c(city,
+                                                                    develop, 
+                                  prop_veg_avg,
+                  med_income,
+                  pop_density.x,
+                  Pct_Units_Lead, 
+                  PM2.5_Count,
+                  Average_PTSDF, 
+                  Average_PNPL, 
+                  Average_RSEI_Concentrations,
+                  Average_PWDIS, 
+                  Annual_Tons_Km2_Diesel_NOx))
+
+B <- split(B[,1:12], B$city)
+
+for (group_name in names(B)) {
+  group_df <- B[[group_name]]
+  correlations <- cor(group_df[, -1], method = "spearman", use="pairwise.complete.obs")  # Exclude the 'Group' column
+  corrplot(correlations, method = "number", title=group_name)
+}
 
 ```
 
@@ -139,6 +175,7 @@ Using a negative binomial because of overdispersion in the Poisson model
 
 coymodglobal <- glmmTMB(Coyote ~ 
                           city + 
+                          scale(prop_veg_avg) + 
                           scale(develop) + 
                            scale(med_income) + 
                           scale(Pct_Units_Lead) +
@@ -147,7 +184,7 @@ coymodglobal <- glmmTMB(Coyote ~
                           scale(Average_PNPL) + 
                           scale(Average_RSEI_Concentrations) + 
                           scale(Average_PWDIS) + 
-                          scale(Annual_Tons_Km2_Diesel_NOx) + scale(pop_density) + 
+                          scale(Annual_Tons_Km2_Diesel_NOx) + scale(pop_density.x) + 
                           season + 
                           ( 1 | site), 
                 data = all_dat, 
@@ -417,7 +454,7 @@ write.csv(coy_tbl,"Coy mod sel table 12-22-23.csv", row.names = F)
 
 # Let's plot the top model 
 summary(coymodeff)
-coyeffplot <- sjPlot::plot_model(coymodeff, title = "Top model: coyotes",
+coyeffplot <- sjPlot::plot_model(coymodglobal, title = "Top model: coyotes",
                              rm.terms = "season [Fall20,
                             Spring19, Spring20, Summer19, Summer20,
                             Winter19,Winter20]", 
@@ -461,7 +498,7 @@ plotResiduals(simOut, all_dat$Environment1, quantreg = T)
 ### marginal plots 
 
 
-plot_model(coymod2, type = "pred", terms = "EFFECT",
+plot_model(coymodglobal, type = "pred", terms = "EFFECT",
            scale_y_log10(limits = c(0.1, 10)))
 
 
@@ -475,6 +512,7 @@ Using a negative binomial because of overdispersion in the Poisson model
 
 racmodglobal <- glmmTMB(Raccoon ~ 
                           city + 
+                          scale(prop_veg_avg) + 
                           scale(develop) + 
                           scale(med_income) + 
                           scale(Pct_Units_Lead) +
@@ -483,7 +521,7 @@ racmodglobal <- glmmTMB(Raccoon ~
                           scale(Average_PNPL) + 
                           scale(Average_RSEI_Concentrations) + 
                           scale(Average_PWDIS) + 
-                          scale(Annual_Tons_Km2_Diesel_NOx)+ scale(pop_density) + 
+                          scale(Annual_Tons_Km2_Diesel_NOx)+ scale(pop_density.x) + 
                           season + 
                           ( 1 | site), 
                         data = all_dat, 
@@ -756,6 +794,7 @@ Using a negative binomial because of overdispersion in the Poisson model
 
 oppmodglobal <- glmmTMB(Virginia_opossum ~ 
                           city + 
+                          scale(prop_veg_avg) + 
                           scale(develop) + 
                           scale(med_income) + 
                           scale(Pct_Units_Lead) +
@@ -764,7 +803,7 @@ oppmodglobal <- glmmTMB(Virginia_opossum ~
                           scale(Average_PNPL) + 
                           scale(Average_RSEI_Concentrations) + 
                           scale(Average_PWDIS) + 
-                          scale(Annual_Tons_Km2_Diesel_NOx)+ scale(pop_density) + 
+                          scale(Annual_Tons_Km2_Diesel_NOx)+ scale(pop_density.x) + 
                           season + 
                           ( 1 | site), 
                         data = all_dat, 
