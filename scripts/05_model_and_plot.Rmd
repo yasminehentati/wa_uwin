@@ -100,17 +100,16 @@ burden_plot <- all_dat %>% distinct(site, .keep_all = TRUE) %>%
   geom_histogram(fill = "white", colour = "black") +
   facet_grid(city ~ .)
 
-colnames(all_dat)
 all_dat %>% distinct(site, .keep_all = TRUE) %>% 
   ggplot(aes(x = Impervious, y = prop_veg_avg)) +
-  geom_point(color = "blue") +  # Set point color
+  geom_point(color = "red") +  # Set point color
   labs(x = "impervious", y = "NDVI") 
 
 all_dat %>% distinct(site, .keep_all = TRUE) %>%
   ggplot(aes(x = prop_veg_avg)) +
   geom_point(x = site, y = prop) +
   facet_grid(city ~ .)
-?geom_point
+
 develop <- all_dat %>% distinct(site, .keep_all = TRUE) %>%
   ggplot(aes(x = develop)) +
   geom_histogram(fill = "white", colour = "black") +
@@ -119,7 +118,7 @@ develop <- all_dat %>% distinct(site, .keep_all = TRUE) %>%
 cordat <- all_dat %>% distinct(site, .keep_all = TRUE) %>% 
   dplyr::select(c(develop, 
                   med_income,
-                  prop_veg_avg,
+                  prop_veg_5,
                   pop_density.x,
                   Pct_Units_Lead, 
                   PM2.5_Count,

@@ -569,9 +569,11 @@ install.packages("conflicted")
 library(conflicted)
 urbcovs <- read_csv(here::here("data", "covariates", "sitecov_1000m_sewatawa_allsites.csv"))
 colnames(urbcovs)
-urbcovs <- urbcovs %>% dplyr::select(c(city, site, prop_veg_5:prop_veg_avg))
+urbcovs <- urbcovs %>% dplyr::select(c(city, site, pop_density:prop_veg_avg))
 
-all_covs <- read_csv(here::here("data", "covariates", "ALL_ENV_URB_SITES_1000m.csv"))
+all_covs <- read_csv(here::here("data", "covariates", "ALL_ENV_URB_SITES_1000m.csv")) %>%
+  dplyr::select(-c(pop_density.x:prop_veg_avg.y))
+colnames(all_covs)
 all_covs <- left_join(all_covs, urbcovs, by = c("city", "site"))
 colnames(all_covs)
 write_csv(all_covs, here::here("data", "covariates", "ALL_ENV_URB_SITES_1000m.csv"))

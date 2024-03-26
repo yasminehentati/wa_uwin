@@ -1102,14 +1102,17 @@ length(match(unique(data_export$city_site),unique(med_inc$city_site))) # make su
 ndvi_kp <- raster(here("data", "NDVI_data", "NDVI2020SEWATAWA3038_1.tif"))
 
 suggest_top_crs(ndvi_kp)
-ndvi_kp <- projectRaster(ndvi_kp, crs = "EPSG:6599")
+ndvi_kp <- projectRaster(ndvi_kp, crs = "EPSG:3857")
 
 # reproject points to raster crs 
 points_wa <- st_transform(points_wa, crs = st_crs(ndvi_kp))
 
 # extract the proportion of the buffer that has an NDVI greater than 0.2 (vegetation cover)
 # this returns a list, so we can use lapply to calculate the proportion for each site
-ndvi_extract <- raster::extract(ndvi_kp, points_wa, buffer = 1000)
+
+ndvi_extract <- raster::extract(ndvi_kp, points_wa, buffer = 1000) # in m
+
+
 
 # calculate the proportion of a site that is covered in vegetation
 prop_ndvi_greater0.5 <- lapply(ndvi_extract, function (x){
@@ -1181,6 +1184,8 @@ data_export$prop_veg_5 <- points_wa$prop_veg_5
 data_export$prop_veg_6 <- points_wa$prop_veg_6
 data_export$prop_veg_avg <- points_wa$prop_veg_avg
 
+
+#######################################
 
 # Add the impervious surface percentage
 data_export$med_income <- med_inc$med_income
