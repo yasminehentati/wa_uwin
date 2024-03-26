@@ -119,7 +119,7 @@ cordat <- all_dat %>% distinct(site, .keep_all = TRUE) %>%
   dplyr::select(c(develop, 
                   med_income,
                   prop_veg_5,
-                  pop_density.x,
+                  pop_density,
                   Pct_Units_Lead, 
                   PM2.5_Count,
                   Average_PTSDF, 
