@@ -92,10 +92,6 @@ write_csv(vegandf, here("data", "vegan_sites.csv"))
 # we want species in columns and sites in rows, so using wide version
 # need to convert data to binary 
 
-your_data <- your_data %>%
-  mutate_all(~ if_else(. != 0, 1, 0))
-
-
 
 ##### Import results into data set 
 

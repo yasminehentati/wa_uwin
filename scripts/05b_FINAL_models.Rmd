@@ -1,0 +1,218 @@
+---
+title: "05b_FINAL_models_and_plots"
+output: html_document
+date: "2024-06-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Black bear models 
+```{r}
+
+# Grouped exposures/effects model
+bearmod <- glmmTMB(Black_bear ~ city + scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                   data = all_dat, 
+                   offset = log(days.active),
+                   family = "nbinom2",
+                   na.action = "na.fail")
+summary(bearmod)
+
+bearmodsewa <- glmmTMB(Black_bear ~ scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + 
+                     # scale(pop_density) 
+                     + ( 1 | site), 
+                data = all_dat_sewa, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+bearmodtawa <- glmmTMB(Black_bear ~ scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                data = all_dat_tawa, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+# None of the models converge
+
+```
+
+
+## Bobcat models 
+```{r}
+
+# Grouped exposures/effects model
+bobcatmod <- glmmTMB(Bobcat ~ city + scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                   data = all_dat, 
+                   offset = log(days.active),
+                   family = "nbinom2",
+                   na.action = "na.fail")
+summary(bobcatmod)
+
+bobcatmodsewa <- glmmTMB(Bobcat ~ scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + 
+                       # scale(pop_density) 
+                       + ( 1 | site), 
+                data = all_dat_sewa, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+bobcatmodtawa <- glmmTMB(Bobcat ~ scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                data = all_dat_tawa, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+# model diagnostics 
+simOut <- simulateResiduals(fittedModel = bobcatmod, plot = T)
+
+testOutliers(bobcatmod)
+
+testDispersion(bobcatmod)
+
+testZeroInflation(coymodglobal) # test for zero-inflation -- In a model with variable dispersion, 
+# this is often the signal that some other distributional assumptions are violated, 
+# but not seeing zero-inflation so we can probably  move on with this model 
+
+plotResiduals(simOut, form = all_dat$site)
+plot(simOut, quantreg = T)
+par(mfrow = c(1,2))
+plotResiduals(simOut, all_dat$city) 
+
+plotResiduals(simOut, all_dat$Environment1, quantreg = T)
+
+
+# Model converges for global model but not city specific models 
+```
+
+## Coyote models
+```{r}
+# Coyote model -- negative binomial, grouped exposures and effects
+coymod <- glmmTMB(Coyote ~ city +
+                    scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                data = all_dat, 
+                offset = log(days.active),
+                family = "nbinom2",
+                na.action = "na.fail")
+summary(coymod)
+
+coymodsewa <- glmmTMB(Coyote ~ scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + 
+                       # scale(pop_density) 
+                       + ( 1 | site), 
+                data = all_dat_sewa, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+summary(coymodsewa)
+
+coymodtawa <- glmmTMB(Coyote ~ scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                data = all_dat_tawa, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+summary(coymodtawa)
+```
+
+
+## Raccoon models
+```{r}
+
+# Grouped exposures/effects model
+racmod <- glmmTMB(Raccoon ~ city + scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                   data = all_dat, 
+                   offset = log(days.active),
+                   family = "nbinom2",
+                   na.action = "na.fail")
+summary(racmod)
+
+racmodsewa <- glmmTMB(Raccoon ~ scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                data = all_dat_sewa, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+racmodtawa <- glmmTMB(Raccoon ~ scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                data = all_dat_tawa, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+```
+
+
+## River otter models 
+```{r}
+
+# Grouped exposures/effects model
+ottermod <- glmmTMB(River_otter ~ city + scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                   data = all_dat, 
+                   offset = log(days.active),
+                   family = "nbinom2",
+                   na.action = "na.fail")
+summary(ottermod)
+
+ottermodsewa <- glmmTMB(River_otter ~ scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                data = all_dat_sewa, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+ottermodtawa <- glmmTMB(River_otter ~ scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                data = all_dat_tawa, 
+                offset = log(days.active),
+                family = "nbinom2")
+
+# None of the models converge 
+
+```
+
+## Striped skunk models 
+```{r}
+
+# Grouped exposures/effects model
+racmod2 <- glmmTMB(Striped_skunk ~ city + scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                   data = all_dat, 
+                   offset = log(days.active),
+                   family = "nbinom2",
+                   na.action = "na.fail")
+summary(racmod2)
+
+```
+
+## Virginia opossum models
+```{r}
+oppmod2 <- glmmTMB(Virginia_opossum ~ city + scale(prop_veg_avg) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                   data = all_dat, 
+                   offset = log(days.active),
+                   family = "nbinom2",
+                   na.action = "na.fail")
+summary(oppmod2)
+```

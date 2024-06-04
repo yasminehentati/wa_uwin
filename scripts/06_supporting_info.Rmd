@@ -1,0 +1,63 @@
+---
+title: "06_supporting_info"
+output: html_document
+date: "2024-06-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+install.packages("gt")
+library(gt)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+Raw data counts 
+```{r}
+wa_counts <- read_csv("data/wa_counts.csv")
+head(wa_counts)
+
+# sum all active trap nights 
+sum(wa_counts$days.active, na.rm = TRUE)
+
+# Table of all raw counts -- both 
+
+all_counts <- wa_counts %>% 
+  group_by(species) %>% 
+  summarise(count = sum(count))
+
+gt(all_counts) %>% 
+  tab_header(
+    title = "Both cities")
+
+
+# Table of raw counts -- by city 
+
+# seattle 
+sewa_counts <- wa_counts %>% 
+group_by(species) %>% 
+  filter(city == "sewa") %>% 
+  summarise(count = sum(count))
+
+gt(sewa_counts) %>% 
+  tab_header(
+    title = "Seattle")
+  
+# tacoma 
+tawa_counts <- wa_counts %>% 
+  group_by(species) %>% 
+  filter(city == "tawa") %>% 
+  summarise(count = sum(count))
+ 
+gt(tawa_counts) %>% 
+  tab_header(
+    title = "Tacoma")
+
+
+```

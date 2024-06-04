@@ -276,14 +276,14 @@ summary(coymodint)
 
 # separate city models 
 
-coymod3a <- glmmTMB(Coyote ~ scale(prop_veg_avg) + 
+coymod3a <- glmmTMB(Coyote ~ scale(develop) + 
                      scale(EXPOSURE) + scale(EFFECT)  + 
                      scale(med_income) + season + scale(pop_density) + ( 1 | site), 
                 data = all_dat_sewa, 
                 offset = log(days.active),
                 family = "nbinom2")
 
-coymod3b <- glmmTMB(Coyote ~ scale(prop_veg_avg) + 
+coymod3b <- glmmTMB(Coyote ~ scale(develop) + 
                      scale(EXPOSURE) + scale(EFFECT)  + 
                      scale(med_income) + season + scale(pop_density) + ( 1 | site), 
                 data = all_dat_tawa, 
