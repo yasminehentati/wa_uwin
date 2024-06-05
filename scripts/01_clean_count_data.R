@@ -353,9 +353,42 @@ se_counts$species[se_counts$species == "Sciurus carolinensis"] <- "Eastern gray 
 ta_counts <- ta_counts %>% dplyr::filter(species != "Domestic dog", species != "Domestic cat")
 ta_counts$species
 
+# rename skunks to match
+ta_counts$species[ta_counts$species == "Striped Skunk"] <- "Striped skunk"
 
 # merge data 
 wa_counts <- rbind(ta_counts, se_counts)
 
 # save merged data
 write_csv(wa_counts, "data/wa_counts.csv")
+
+
+### Calculations for manuscript
+
+wa_counts <- read_csv("data/wa_counts.csv")
+
+head(wa_counts)
+
+# sum all active trap nights 
+sum(wa_counts$days.active, na.rm = TRUE)
+
+# Table of all raw counts -- both 
+
+wa_counts %>% 
+  group_by(species) %>% 
+  summarise(count = sum(count))
+
+# Table of raw counts -- by city 
+
+# seattle 
+wa_counts %>% 
+group_by(species) %>% 
+  filter(city == "sewa") %>% 
+  summarise(count = sum(count))
+  
+# tacoma 
+wa_counts %>% 
+  group_by(species) %>% 
+  filter(city == "tawa") %>% 
+  summarise(count = sum(count))
+  

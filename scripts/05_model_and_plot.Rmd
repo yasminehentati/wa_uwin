@@ -11,7 +11,6 @@ Read and explore data
 knitr::opts_chunk$set(echo = TRUE)
 
 
-
 # packages
 
 library(corrplot)
@@ -31,8 +30,8 @@ library(here)
 make_names <- function(x) {
   gsub("\\.", "_", make.names(gsub("*.csv$", "", x)))
 }
-
-# read in count and covariate data 
+?read_csv
+# read in count and covariate data
 all_dat <- read_csv(here("data", "covariates", "WIDE_COUNTS_ALL_ENV_URB_SITES_1000m.csv")) %>%
   drop_na(utm_est)  %>% # drop NAs of location  
   subset(season != "Spring20" & 
@@ -40,9 +39,33 @@ all_dat <- read_csv(here("data", "covariates", "WIDE_COUNTS_ALL_ENV_URB_SITES_10
            season != "Summer20") %>%# %>% keep only win19-win20
   # subset(site != "P-OV1" & site != "P-TE1" & site != "P-RWSR" & site != "P-OLT")
 #   clean_names() # make spaces underscores %>% 
-  rename_with(make_names, c(1:21)) # make spaces underscores for spp names (without janitor)
+  rename_with(make_names, c(1:20)) # make spaces underscores for spp names (without janitor)
 
 colnames(all_dat)
+
+## adjust days active based on mason's manual ifno 
+
+# strike P-GW1 Summer 19 
+all_dat <- all_dat %>%
+  filter(!(site == "P-GW1" & season == "Summer19"))
+
+#  P-GW1 Winter 19 = 29 days
+#  G-TNC1 Winter 19 = 29 days
+all_dat <- all_dat %>% 
+   mutate(site = as.character(site)) %>% 
+ mutate(days.active = case_when(site == "P-GW1" | site == "G-TNC1" & 
+                               season == "Winter19" ~ 29,
+                               TRUE ~ days.active))
+
+# 3. P-OV1 Winter 19 = 28 days
+# 4. G-WLP1 Winter 19 = 28 days
+all_dat <- all_dat %>% 
+   mutate(site = as.character(site)) %>% 
+ mutate(days.active = case_when(site == "P-OV1" | site == "G-WLP1" & 
+                               season == "Winter19" ~ 28,
+                               TRUE ~ days.active))
+
+
 
 # give median days active to sites that have days active as NA
 all_dat$days.active[is.na(all_dat$days.active)] <- median(all_dat$days.active[!is.na(all_dat$days.active)])
@@ -53,6 +76,7 @@ all_dat_veg <- read_csv(here("data", "covariates", "vegan_sites_all_covs.csv")) 
   drop_na(utm_est) # drop NAs of location 
 
 all_dat_veg$evenness
+
 # make things factors
 all_dat$city <- as.factor(all_dat$city)
 all_dat$season <- as.factor(all_dat$season)
@@ -64,29 +88,9 @@ all_dat_veg$city <- as.factor(all_dat_veg$city)
 all_dat_veg$site <- as.factor(all_dat_veg$site)
 
 
-# rescale data as needed 
-# all_dat$med_income <- all_dat$med_income / 1000 # to per $1000 
-# all_dat$develop <- all_dat$develop * 100 # to percentages 
-
-
-
-# scale data 
-
-
-# rescale data as needed 
-# all_dat_veg$med_income <- all_dat_veg$med_income / 1000 # to per $1000 
-# all_dat_veg$develop <- all_dat_veg$develop * 100 # to percentages 
-
-
-# explore data 
-colnames(all_dat)
-
-
 # get city specific data set 
 all_dat_tawa  <- all_dat %>% dplyr::filter(city == "tawa")
 all_dat_sewa  <- all_dat %>% dplyr::filter(city == "sewa")
-
-glimpse(all_dat)
 
 
 # get city specific data set - vegan
@@ -100,12 +104,23 @@ burden_plot <- all_dat %>% distinct(site, .keep_all = TRUE) %>%
   geom_histogram(fill = "white", colour = "black") +
   facet_grid(city ~ .)
 
+burden_plot_exp <- all_dat %>% distinct(site, .keep_all = TRUE) %>%
+  ggplot(aes(x = EXPOSURE)) +
+  geom_histogram(fill = "white", colour = "black") +
+  facet_grid(city ~ .)
+
+burden_plot_eff <- all_dat %>% distinct(site, .keep_all = TRUE) %>%
+  ggplot(aes(x = EFFECT)) +
+  geom_histogram(fill = "white", colour = "black") +
+  facet_grid(city ~ .)
+
+
+# correlation between impervius surface and prop veg avg 
 all_dat %>% distinct(site, .keep_all = TRUE) %>% 
   ggplot(aes(x = Impervious, y = prop_veg_avg)) +
   geom_point(color = "red") +  # Set point color
   labs(x = "impervious", y = "NDVI") 
 
-colnames(all_dat)
 cordat <- all_dat %>% distinct(site, .keep_all = TRUE) %>% 
   dplyr::select(c(natural, 
                   med_income,
@@ -125,12 +140,12 @@ corr <- cor(cordat, method = "spearman", use="pairwise.complete.obs")
 colnames(corr) <- c("Toxic release concentration", "Distance to Superfund", 
                     "PM2.5 concentration", "Percent units with lead", 
                     "Distance to hazardous waste sites",
-                    "Population density", "Diesel exhaust emissions", "Wastewater discharge",
+                    "Human population density", "Diesel exhaust emissions", "Wastewater discharge",
                     "Natural land cover", "Median income")
 
 rownames(corr) <- c("Toxic release concentration", "Distance to Superfund", 
                     "PM2.5 concentration", "Percent units with lead", "Distance to hazardous waste sites",
-                    "Population density", "Diesel exhaust emissions", "Wastewater discharge",
+                    "Human population density", "Diesel exhaust emissions", "Wastewater discharge",
                     "Natural land cover", "Median income")
 
 
@@ -143,25 +158,50 @@ corrplot(corr, method = 'color',  type = 'lower', order = 'hclust', tl.col = 'bl
 ##### Variables grouped 
 
 cordat <- all_dat %>% distinct(site, .keep_all = TRUE) %>% 
-  dplyr::select(c(natural, 
+  dplyr::select(c(develop, 
                   med_income,
                #   prop_veg_avg,
                   pop_density,
                   EXPOSURE,
                   EFFECT))
 
-
 corr <- cor(cordat, method = "spearman", use="pairwise.complete.obs")
 corrplot(corr, method = "number")
 
-colnames(corr) <- c("Natural land cover", "Median income",
-                    "Population density", 
+colnames(corr) <- c("Developed land cover", "Median income",
+                    "Human population density", 
                     "Env. exposures", "Env. effects")
 
-rownames(corr) <- c("Natural land cover", "Median income",
-                    "Population density", 
+rownames(corr) <- c("Developed land cover", "Median income",
+                    "Human population density", 
                     "Env. exposures", "Env. effects")
 
+corrplot(corr, method = 'color',  type = 'lower', order = 'hclust', tl.col = 'black',
+         cl.ratio = 0.2, tl.srt = 45, 
+         col = COL1('YlGn'), cl.pos = 'b', addgrid.col = 'white', addCoef.col = 'grey50')
+
+# Grouped by city
+
+# Seattle
+cordatsewa <- all_dat %>% distinct(site, .keep_all = TRUE) %>% 
+  filter(city == "sewa") %>% 
+  dplyr::select(c(urban, 
+                  med_income,
+               #   prop_veg_avg,
+                  pop_density,
+                  EXPOSURE,
+                  EFFECT))
+
+corr <- cor(cordatsewa, method = "spearman", use="pairwise.complete.obs")
+corrplot(corr, method = "number")
+
+colnames(corr) <- c("Developed land cover", "Median income",
+                    "Human population density", 
+                    "Env. exposures", "Env. effects")
+
+rownames(corr) <- c("Developed land cover", "Median income",
+                    "Human population density", 
+                    "Env. exposures", "Env. effects")
 
 corrplot(corr, method = 'color',  type = 'lower', order = 'hclust', tl.col = 'black',
          cl.ratio = 0.2, tl.srt = 45, 
@@ -169,10 +209,34 @@ corrplot(corr, method = 'color',  type = 'lower', order = 'hclust', tl.col = 'bl
 
 
 
+# Tacoma
+cordattawa <- all_dat %>% distinct(site, .keep_all = TRUE) %>% 
+  filter(city == "tawa") %>% 
+  dplyr::select(c(develop, 
+                  med_income,
+               #   prop_veg_avg,
+                  pop_density,
+                  EXPOSURE,
+                  EFFECT))
+
+corr <- cor(cordattawa, method = "spearman", use="pairwise.complete.obs")
+corrplot(corr, method = "number")
+
+colnames(corr) <- c("Developed land cover", "Median income",
+                    "Human population density", 
+                    "Env. exposures", "Env. effects")
+
+rownames(corr) <- c("Developed land cover", "Median income",
+                    "Human population density", 
+                    "Env. exposures", "Env. effects")
+
+corrplot(corr, method = 'color',  type = 'lower', order = 'hclust', tl.col = 'black',
+         cl.ratio = 0.2, tl.srt = 45, 
+         col = COL1('YlGn'), cl.pos = 'b', addgrid.col = 'white', addCoef.col = 'grey50')
 
 # all below 0.7 -- good 
 
-#### look at correlations -- by city
+#### look at correlations -- by city and inidvidual variables
 
 library(Hmisc) # this package has implemented a cor function calculating both r and p.  
 
@@ -180,7 +244,7 @@ colnames(all_dat)
 
 # split the data 
 B <- all_dat %>% distinct(site, .keep_all=TRUE) %>% dplyr::select(c(city, 
-                                                                    natural, 
+                                                                    develop, 
                                 #  prop_veg_avg,
                   med_income,
                   pop_density,
@@ -192,9 +256,9 @@ B <- all_dat %>% distinct(site, .keep_all=TRUE) %>% dplyr::select(c(city,
                   Average_PWDIS, 
                   Annual_Tons_Km2_Diesel_NOx))
 
-colnames(B) <- c("city", "Natural land cover", 
+colnames(B) <- c("city", "Developed land cover", 
                 "Median income",
-                "Population density",
+                "Human population density",
                 "Percent units with lead",
                 "PM2.5 concentration",
                 "Distance to hazardous waste sites",
@@ -213,20 +277,20 @@ for (group_name in names(B)) {
          col = COL1('YlGn'), cl.pos = 'b', addgrid.col = 'white', addCoef.col = 'grey50', title=group_name)
 }
 
-which(is.na(all_dat))
+write.csv(all_dat, "data_6-4-24-test.csv")
 
 ```
 
 
 Coyote models 
 Using a negative binomial because of overdispersion in the Poisson model 
-```{r cars}
+```{r}
 #### Global model 
 
 coymodglobal <- glmmTMB(Coyote ~ 
                           city + 
                         #   scale(prop_veg_avg) + 
-                           scale(develop) + 
+                           scale(natural) + 
                            scale(med_income) + 
                           scale(Pct_Units_Lead) +
                           scale(PM2.5_Count) + 
@@ -246,7 +310,7 @@ summary(coymodglobal)
 # Grouped exposures/effects model
 coymod2 <- glmmTMB(Coyote ~ city + 
                  #     scale(prop_veg_avg) + 
-                    scale(develop) + 
+                    scale(natural) + 
                      scale(EXPOSURE) + scale(EFFECT)  + 
                      scale(med_income) + season + scale(pop_density) + ( 1 | site), 
                 data = all_dat, 
@@ -273,7 +337,6 @@ coymodint <- glmmTMB(Coyote ~ city * scale(develop) + city * scale(EXPOSURE) + c
                 na.action = "na.fail")
 summary(coymodint)
 
-
 # separate city models 
 
 coymod3a <- glmmTMB(Coyote ~ scale(develop) + 
@@ -292,6 +355,7 @@ coymod3b <- glmmTMB(Coyote ~ scale(develop) +
 
 summary(coymod3a)
 summary(coymod3b)
+
 AICc(coymod3a)
 AICc(coymod3b)
 

@@ -105,16 +105,18 @@ coymod <- glmmTMB(Coyote ~ city +
                 offset = log(days.active),
                 family = "nbinom2",
                 na.action = "na.fail")
+
 summary(coymod)
 
-coymodsewa <- glmmTMB(Coyote ~ scale(develop) + 
+coymodsewa <- glmmTMB(Coyote ~ 
+                        scale(develop) + 
                      scale(EXPOSURE) + scale(EFFECT)  + 
                      scale(med_income) + season + 
-                       # scale(pop_density) 
+                      #  scale(pop_density) 
                        + ( 1 | site), 
                 data = all_dat_sewa, 
                 offset = log(days.active),
-                family = "nbinom2")
+                family = "nbinom2",na.action = "na.fail")
 
 summary(coymodsewa)
 
@@ -123,7 +125,8 @@ coymodtawa <- glmmTMB(Coyote ~ scale(develop) +
                      scale(med_income) + season + scale(pop_density) + ( 1 | site), 
                 data = all_dat_tawa, 
                 offset = log(days.active),
-                family = "nbinom2")
+                family = "nbinom2",
+                na.action = "na.fail")
 
 summary(coymodtawa)
 ```
@@ -144,17 +147,23 @@ summary(racmod)
 
 racmodsewa <- glmmTMB(Raccoon ~ scale(develop) + 
                      scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                     scale(med_income) + season +
+                       # scale(pop_density)
+                       + ( 1 | site), 
                 data = all_dat_sewa, 
                 offset = log(days.active),
-                family = "nbinom2")
+                family = "nbinom2",
+                na.action = "na.fail")
+summary(racmodsewa)
 
 racmodtawa <- glmmTMB(Raccoon ~ scale(develop) + 
                      scale(EXPOSURE) + scale(EFFECT)  + 
                      scale(med_income) + season + scale(pop_density) + ( 1 | site), 
                 data = all_dat_tawa, 
                 offset = log(days.active),
-                family = "nbinom2")
+                family = "nbinom2",
+                na.action = "na.fail")
+summary(racmodtawa)
 
 ```
 
@@ -174,7 +183,9 @@ summary(ottermod)
 
 ottermodsewa <- glmmTMB(River_otter ~ scale(develop) + 
                      scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                     scale(med_income) + season + 
+                       # scale(pop_density) 
+                       + ( 1 | site), 
                 data = all_dat_sewa, 
                 offset = log(days.active),
                 family = "nbinom2")
@@ -194,25 +205,313 @@ ottermodtawa <- glmmTMB(River_otter ~ scale(develop) +
 ```{r}
 
 # Grouped exposures/effects model
-racmod2 <- glmmTMB(Striped_skunk ~ city + scale(develop) + 
+skunkmod <- glmmTMB(Striped_skunk ~ city + scale(develop) + 
                      scale(EXPOSURE) + scale(EFFECT)  + 
                      scale(med_income) + season + scale(pop_density) + ( 1 | site), 
                    data = all_dat, 
                    offset = log(days.active),
                    family = "nbinom2",
                    na.action = "na.fail")
-summary(racmod2)
+summary(skunkmod)
+
+skunkmodsewa <- glmmTMB(Striped_skunk ~ scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season +
+                       # scale(pop_density)
+                       + ( 1 | site), 
+                data = all_dat_sewa, 
+                offset = log(days.active),
+                family = "nbinom2",
+                na.action = "na.fail")
+summary(skunkmodsewa)
+
+skunkmodtawa <- glmmTMB(Striped_skunk ~ scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                data = all_dat_tawa, 
+                offset = log(days.active),
+                family = "nbinom2",
+                na.action = "na.fail")
+
+summary(skunkmodtawa)
+
+# model diagnostics 
+simOut <- simulateResiduals(fittedModel = skunkmod, plot = T)
+
+testOutliers(bobcatmod)
+
+testDispersion(skunkmod)
+
+testZeroInflation(skunkmodtawa) # test for zero-inflation -- In a model with variable dispersion, 
+# this is often the signal that some other distributional assumptions are violated, 
+# but not seeing zero-inflation so we can probably  move on with this model 
+
+plotResiduals(simOut, form = all_dat$site)
+plot(simOut, quantreg = T)
+par(mfrow = c(1,2))
+plotResiduals(simOut, all_dat$city) 
+
+plotResiduals(simOut, all_dat$Environment1, quantreg = T)
 
 ```
 
 ## Virginia opossum models
 ```{r}
-oppmod2 <- glmmTMB(Virginia_opossum ~ city + scale(prop_veg_avg) + 
+oppmod <- glmmTMB(Virginia_opossum ~ city + scale(develop) + 
                      scale(EXPOSURE) + scale(EFFECT)  + 
                      scale(med_income) + season + scale(pop_density) + ( 1 | site), 
                    data = all_dat, 
                    offset = log(days.active),
                    family = "nbinom2",
                    na.action = "na.fail")
-summary(oppmod2)
+summary(oppmod)
+
+oppmodsewa <- glmmTMB(Virginia_opossum ~ scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season +
+                       # scale(pop_density)
+                       + ( 1 | site), 
+                data = all_dat_sewa, 
+                offset = log(days.active),
+                family = "nbinom2",
+                na.action = "na.fail")
+summary(oppmodsewa)
+
+oppmodtawa <- glmmTMB(Virginia_opossum ~ scale(develop) + 
+                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+                data = all_dat_tawa, 
+                offset = log(days.active),
+                family = "nbinom2",
+                na.action = "na.fail")
+summary(oppmodtawa)
+
+
 ```
+
+
+Simpson's diversity model 
+```{r}
+
+# Grouped model 
+simpmod <- glmmTMB(simpson.di ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) +
+                      scale(pop_density) + ( 1 | site), 
+                   data = all_dat_veg, 
+                   family = "gaussian",
+                   na.action = "na.fail") 
+summary(simpmod)
+
+simpmodsewa <- glmmTMB(simpson.di ~ scale(develop) + scale(EXPOSURE) + 
+                         scale(EFFECT) + scale(pop_density) + 
+                         scale(med_income) + ( 1 | site), 
+                    data = all_dat_sewa_veg, 
+                    family = "gaussian")
+
+summary(simpmodsewa)
+
+simpmodtawa <- glmmTMB(simpson.di ~ scale(develop) + scale(EXPOSURE) + 
+                         scale(EFFECT) + scale(pop_density) + 
+                         scale(med_income) + ( 1 | site),
+                    data = all_dat_tawa_veg, 
+                    family = "gaussian")
+summary(simpmodtawa)
+
+```
+
+
+
+Species richness model 
+```{r}
+colnames(all_dat_veg)
+# Grouped model 
+richmod <- glmmTMB(richness ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(med_income) +
+                      scale(pop_density) + ( 1 | site), 
+                   data = all_dat_veg, 
+                   family = "poisson",
+                   na.action = "na.fail") 
+summary(richmod)
+
+richmodsewa <- glmmTMB(richness ~ scale(develop) + scale(EXPOSURE) + 
+                         scale(EFFECT) + scale(pop_density) + 
+                         scale(med_income) + ( 1 | site), 
+                    data = all_dat_sewa_veg, 
+                    family = "poisson")
+summary(richmodsewa)
+
+richmodtawa <- glmmTMB(richness ~ scale(develop) + scale(EXPOSURE) + 
+                         scale(EFFECT) + scale(pop_density) + 
+                         scale(med_income) + ( 1 | site),
+                    data = all_dat_tawa_veg, 
+                    family = "poisson")
+summary(simpmodtawa)
+
+
+# Nothing matters 
+
+```
+
+
+
+## Figures! 
+
+# Results tables 
+```{r}
+
+# species models -- both cities 
+tab_model(coymod, racmod, oppmod, skunkmod, bobcatmod,
+          collapse.ci = TRUE, 
+          p.style     = "numeric_stars"# ,
+       #    rm.terms = c("season [Fall20,
+   #                          Spring19, Spring20, Summer19, Summer20,
+    #                        Winter19,Winter20]")
+          ) 
+
+
+# species models -- seattle 
+tab_model(coymodsewa, racmodsewa, oppmodsewa, 
+          collapse.ci = TRUE, 
+          p.style     = "numeric_stars",
+          rm.terms = c("season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]")
+          ) 
+
+# species models -- tacoma 
+tab_model(coymodtawa, racmodtawa, oppmodtawa, skunkmodtawa,
+          collapse.ci = TRUE, 
+          p.style     = "numeric_stars",
+          rm.terms = c("season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]")
+          ) 
+
+
+# diversity models 
+tab_model(simpmod, simpmodsewa, simpmodtawa,
+          collapse.ci = TRUE, 
+          p.style     = "numeric_stars",
+          rm.terms = c("season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]")
+          ) 
+
+```
+
+# Forest plots 
+First, both-cities model
+```{r}
+
+# Forest plot of species model estimates --grouped models
+plot_models(coymod, racmod, oppmod, title = "Both cities", show.values = T, grid = TRUE, vline.color = "gray",
+             grid.breaks = c(.1,1,10),
+          p.shape     = "FALSE",
+         rm.terms = c("season [
+                            Winter19,Spring19, Summer19, 
+                             Fall19,Winter20]",
+                             "city [tawa]") , 
+     #       transform = NULL
+               axis.lim = c(0.1,100) 
+     )+ 
+#    scale_y_log10(limits = c(-0.1, 100)) + 
+  scale_color_sjplot("eight") + 
+  scale_x_discrete(labels=c("Developed land cover", "Env. exposures", "Env. effects", "Median income", "Human pop. density"), limits = rev) 
+
+
+```
+
+
+Seattle model
+```{r}
+
+# Forest plot of species model estimates -- Seattle 
+plot_models(coymodsewa, racmodsewa, oppmodsewa, title = "Seattle", show.values = T, grid = TRUE, vline.color = "gray",
+             grid.breaks = c(0.1,1,10),
+          p.shape     = "FALSE",
+         rm.terms = c("season [
+                            Winter19,Spring19, Summer19, 
+                             Fall19,Winter20]") , 
+     #       transform = NULL
+               axis.lim = c(0,10) 
+     )+ 
+#    scale_y_log10(limits = c(-0.1, 100)) + 
+  scale_color_sjplot("eight") + 
+  scale_x_discrete(labels=c("Developed land cover", "Env. exposures", "Env. effects", "Median income"), limits = rev) 
+
+summary(coymodsewa)
+```
+
+
+Tacoma model
+```{r}
+
+# Forest plot of species model estimates -- Tacoma
+plot_models(coymodtawa, racmodtawa, oppmodtawa, title = "Tacoma", show.values = T, grid = TRUE, vline.color = "gray",
+             grid.breaks = c(0.1,1,10),
+          p.shape     = "FALSE",
+         rm.terms = c("season [
+                            Winter19,Spring19, Summer19, 
+                             Fall19,Winter20]") , 
+     #       transform = NULL
+               axis.lim = c(0,10) 
+     )+ 
+#    scale_y_log10(limits = c(-0.1, 100)) + 
+  scale_color_sjplot("eight") + 
+  scale_x_discrete(labels=c("Developed land cover", "Env. exposures", "Env. effects", "Median income", "Human pop. density"), limits = rev) 
+
+```
+
+
+Diversity models
+```{r}
+
+# Forest plot of species model estimates -- Tacoma
+plot_models(simpmod, simpmodsewa, simpmodtawa, title = "Tacoma", show.values = T, grid = TRUE, vline.color = "gray",
+            grid.breaks = c(-0.5,0,0.5),
+         p.shape     = "FALSE",
+         axis.lim = c(-0.5,0.5)
+     )+ 
+#    scale_y_log10(limits = c(-0.1, 100)) + 
+  scale_color_sjplot("eight") + 
+  scale_x_discrete(labels=c("Developed land cover", "Env. exposures", "Env. effects", "Median income", "Human pop. density"), limits = rev) 
+
+
+theme_set(theme_sjplot())
+?plot_model
+# income plots 
+income_both <- plot_model(simpmod, type = "pred", terms = c("med_income"), title = "",
+                          axis.title = c("Median income", "Simpson's diversity index"),
+           axis.labels = c("$50,000", "$100,000", "$150,000", "$200,000"),
+           axis.lim = list(c(48000,175000), c(0.2,0.8)))
+
+income_sewa <- plot_model(simpmodsewa, type = "pred", terms = c("med_income"), title = "",
+                          axis.title = c("Median income", ""),
+           axis.labels = c("$50,000", "$100,000", "$150,000", "$200,000"),
+           axis.lim = list(c(40000,170000), c(0.2,0.8)))
+
+income_tawa <- plot_model(simpmodtawa, type = "pred", terms = c("med_income"), title = "",
+                          axis.title = c("Median income", ""),  
+                          grid.breaks = c(50000,75000,100000),
+           axis.lim = list(c(40000,120000), c(0.2,0.8)))
+    
+
+summary(simpmod)
+exp_both <- plot_model(simpmod, type = "pred", terms = c("EXPOSURE"), title = "",
+                          axis.title = c("Environmental exposure percentile", "Simpson's diversity index"),
+                       axis.lim = list(c(0,60), c(0.2,1)))
+
+exp_sewa <- plot_model(simpmodsewa, type = "pred", terms = c("EXPOSURE"), title = "",
+                          axis.title = c("Environmental exposure percentile", ""),
+                       axis.lim = list(c(0,60), c(0.2,1)))
+
+exp_tawa <- plot_model(simpmodtawa, type = "pred", terms = c("EXPOSURE"), title = "",
+                          axis.title = c("Environmental exposure percentile", ""),
+                       axis.lim = list(c(0,60), c(0.2,1)))
+    
+
+plot_grid(income_both, income_sewa, income_tawa, 
+          exp_both, exp_sewa, exp_tawa, labels = c('A', 'B', "C", "D", "E", "F"), nrow = 2,
+          align = "h")
+```
+

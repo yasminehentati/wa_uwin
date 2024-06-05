@@ -39,15 +39,12 @@ counts_all <- wide_counts %>% distinct(site, season, .keep_all = TRUE)
 colnames(counts_all)
 glimpse(counts_all)
 # pivot back to long format 
-counts_long <- pivot_longer(counts_all, cols = 4:21, names_to = "species")
+counts_long <- pivot_longer(counts_all, cols = 4:20, names_to = "species")
 head(counts_long)
 
 ###############################################################################
 
 
-
-
-#########################
 
 
 # using vegan
