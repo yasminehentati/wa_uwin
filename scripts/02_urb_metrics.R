@@ -48,26 +48,29 @@ all_sites <- read.csv(here("data", "wa_counts.csv"), stringsAsFactors = FALSE)
 all_sites <- all_sites[order(all_sites$site),]
 nrow(all_sites)
 head(all_sites)
-
+head(all_sites)
 # create new column for utm zone 
 
 # transform into UTM - WA
-# all_sites <- data.frame(x=all_sites$long, y=all_sites$lat) 
 all_sites <- st_as_sf(all_sites, coords=c("long", "lat"), crs="EPSG:4326")
-all_sites <- st_transform(all_sites, crs = "EPSG:32610")
+#all_sites <- st_transform(all_sites, crs = "EPSG:32610")
+#plot(all_sites)
+mapview(all_sites)
 
+# use utm for geometry
 all_sites <- all_sites %>%
-  dplyr::mutate(utm_east = sf::st_coordinates(.)[,1],
-                utm_north = sf::st_coordinates(.)[,2])
+  st_transform("+proj=utm +zone=10 +datum=WGS84 +units=m")
 
+
+head(all_sites)
 # only keep 1 row for each site 
 points_wa <- all_sites %>% distinct(site, .keep_all = TRUE) 
 
 # check that it looks ok
 mapview(points_wa)
 
-# st_write(points_wa, here("data", "cameras", "points_wa.shp"),
-  #    append = FALSE)
+st_write(points_wa, here("data", "cameras", "points_wa.shp"),
+      append = FALSE)
 
 
 ################################################################################

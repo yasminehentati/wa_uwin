@@ -4,11 +4,10 @@
 
 library(pacman)
 
-p_load(dplyr,sp,raster,here,sf,mapview,raster,remotes,tidycensus,
+p_load(dplyr,sp,raster,here,sf,mapview,rgdal,remotes,tidycensus,
        tidyr,terra,spatialEco,readr,ggfortify,exactextractr,spatstat,
        spdep,landscapemetrics,tmap,viridis,gghighlight,purrr,plainview,tidyterra)
 
-# hello schell lab 
 
 # note that mapview is somewhat demanding, consider skipping
 # mapview functions if your computer is slow  - these are just used to check 
@@ -45,14 +44,20 @@ toxic_release <- read_csv(here("data", "env_health_data", "Toxic_Releases_from_F
 wastewater <- read_csv(here("data", "env_health_data", "Wastewater_Discharge.csv"),
                        col_names=c("County_Name", "Census_Tract", "Average_PWDIS", "IBL_Rank"))
 
-diesel_nox <- read_csv(here("data", "env_health_data", "Diesel_Emission_Levels_of_NOx_(Annual_Tons_Km2).csv"),
+diesel_nox <- read_csv(here("data", "env_health_data", "Proximity_to_Risk_Management_Plan_(RMP)_Facililties.csv"),
                        col_names=c("County_Name", "Census_Tract", "Annual Tons Km2 Diesel NOx", "IBL_Rank"))
+
+prox_rmp <- read_csv(here("data", "env_health_data", "Diesel_Emission_Levels_of_NOx_(Annual_Tons_Km2).csv"),
+                       col_names=c("County_Name", "Census_Tract", "Average PRMP", "IBL_Rank"))
+
+ozone <- read_csv(here("data", "env_health_data", "Ozone_Concentration.csv"),
+                     col_names=c("County_Name", "Census_Tract", "Average Ozone Concentration ppb km2", "IBL_Rank"))
 
 # combine all into one DF 
 
 # first list data frames together 
 listdf <- list(lead, pm25, prox_haz_waste, prox_heavy_traff, prox_superfund,
-               toxic_release, wastewater, diesel_nox)
+               toxic_release, wastewater, diesel_nox, prox_rmp, ozone)
 
 # remove ranking number 
 listdf2 <- lapply(listdf, subset, select = -IBL_Rank)
@@ -65,9 +70,9 @@ envdat <- tail(envdat, -2)
 
 #get only our counties of interest 
 envdat <- envdat %>% dplyr::filter(substr(Census_Tract, 1, 5) 
-                                 %in% c("53033", "53053")) # king pierce 
-                             #            "53061", "53035", # snoho kitsap
-                                #        "53029", "53057")) # island skagit
+                                 %in% c("53033", "53053", # king pierce 
+                                         "53061", "53035", # snoho kitsap
+                                        "53029", "53057")) # island skagit
 
 
 # rename census tract to geoid 
@@ -83,39 +88,60 @@ tractsKP <- st_read(here("data", "income_maps", "seatac_urban_med_income.shp"))
 colnames(tractsKP)
 # merge env health data to polygons 
 
-# join based on GEOID 
-envdatSP <- merge(tractsKP, envdat, by = "GEOID") 
-envdatSP$Pct_Units_Lead
+# join based on GEOID and put in right projection
+envdatSP <- merge(tractsKP, envdat, by = "GEOID") %>% 
+  st_as_sf() %>%
+  st_transform(crs = 32610)
+colnames(envdatSP)
+
+mapview(envdatSP)
 
 # write shapefile for our env health metrics 
-st_write(envdatSP, here("data", "env_health_data", "env_health_all_KP.shp"))
+#st_write(envdatSP, here("data", "env_health_data", "env_health_all_KP.shp"), append = FALSE)
 
 ##### read in camera data so we have our points for the buffers 
 # same proj 
 
+sites <- st_read("data/cameras/points_wa.shp") 
+                  
 
-camdat <- readOGR(dsn = "data/cameras/points_wa.shp") %>% spTransform(crs(tractsKP))
-
-
+envdatSP
 # plot one of our variables to check 
-# same proj 
-
-mapview(camdat)
-mapview(list(camdat, envdatSP),
+mapview(list(sites, envdatSP),
         zcol = list(NULL, "Average_PNPL"))
 
+
+st_crs(envdatSP) == st_crs(lead_rast)
+
+# Plot
+ggplot(data = envdatSP) +
+  geom_sf(aes(fill = Pct_Units_Lead)) +
+  theme_minimal() +
+  labs(fill = "My Variable")
+
+plot(envdatSP, fill = "Pct_Units_Lead")
+
+plot(st_geometry(envdatSP), col = "lightgrey", main = "Pct_Units_Lead")
 
 ########### transform polygon into raster for each variable
 
 #### 1. Lead risk 
-template <- rast(vect(envdatSP),res=0.005)
 
+nalc <- rast("data/landcover/USA_NALCMS_landcover_2015v3_30m.tif")
+template <- rast(ext(vect(envdatSP)), resolution=1000, crs="EPSG:32610")
+
+envdatSP
+
+template <- rast(vect(envdatSP), resolution=50, crs="EPSG:32610")
 lead_rast <- terra::rasterize(vect(envdatSP), template, field = "Pct_Units_Lead")
-class(lead_rast)
+lead_rast
+ggplot(data = lead_rast) +
+  geom_raster(aes(fill = Pct_Units_Lead)) +
+  theme_minimal()
 
-
-# reproject 
-lead_rast <- terra::project(lead_rast, "EPSG:32610")
+# check projection
+crs(lead_rast)
+# lead_rast <- terra::project(lead_rast, "EPSG:32610")
 
 
 # is a spatraster, convert to raster 
@@ -126,9 +152,7 @@ cam_env <- camdat %>%
 crs(lead_rast)
 sites <- cam_env
 
-
 plot(lead_rast,col=rainbow(100)); plot(camdat,col="blue", add = TRUE)
-
 
 lead_dat <- data.frame(
   sites@data,
@@ -145,7 +169,6 @@ cam_env <- camdat %>%
 Sys.time()
 
 # calculate buffer 1000m around camera point 
-
 
 for(i in 1:length(sites)){
   pt <- sites[i,]                                         # select a point
@@ -165,6 +188,109 @@ Sys.time()
 lead_dat <- lead_dat %>%
   dplyr::select(c(site, city, Pct_Units_Lead))
 lead_dat
+
+
+
+pt_terra <- vect(st_transform(pt, st_crs(lead_rast)))
+buff <- terra::buffer(pt_terra, width = buffer_radius)
+
+
+
+
+
+# Create buffers for all sites
+site_buffers <- st_buffer(sites, dist = buffer_radius)
+
+# Convert site buffers to terra vectors
+site_buffers_terra <- vect(site_buffers)
+
+# Convert site_buffers_terra back to sf for plotting
+site_buffers_sf <- st_as_sf(site_buffers_terra)
+
+ggplot() +
+  geom_sf(data = site_buffers_sf, fill = NA, color = "red", size = 1, alpha = 0.5) + # Buffers
+   geom_sf(data = sites, color = "blue", size = 1) + # Sites
+  coord_sf(crs = st_crs(lead_rast), datum = st_crs(lead_rast)) +
+  labs(title = "Sites and Buffers",
+       x = "Easting", y = "Northing") +
+  theme_minimal()
+
+
+
+
+
+
+
+#### 1. Lead risk 
+head(envdatSP)
+
+template <- rast(ext(envdatSP), resolution=100, crs="EPSG:32610")
+
+lead_rast <- terra::rasterize(vect(envdatSP), template, field = "Pct_Units_Lead")
+
+# initialize new col for data
+lead_dat <- st_drop_geometry(sites) %>%
+  dplyr::mutate(Pct_Units_Lead = NA_real_)
+
+# set buffer radius
+buffer_radius <- 500
+
+Sys.time()
+############
+for (i in 1:nrow(sites)) {
+  pt <- sites[i, ]  # iterate through sites 
+
+  # create buffer
+  buff <- vect(st_transform(pt, crs(lead_rast)))
+  buff_terra <- terra::buffer(buff, width = buffer_radius) 
+  
+  # need to give it a bit extra extent 
+  buff_ext <- ext(buff_terra) 
+  buff_ext <- ext(c(
+    xmin = buff_ext$xmin - 1000,
+    xmax = buff_ext$xmax + 1000,
+    ymin = buff_ext$ymin - 1000,
+    ymax = buff_ext$ymax + 1000))
+  buff_terra <- crop(buff_terra, buff_ext)
+  
+  # crop and mask the raster 
+  lead_rast_cropped <- crop(lead_rast, buff_terra)
+  lead_rast_masked <- terra::mask(lead_rast_cropped, buff_terra)
+  
+  # Extract values within the buffer and compute the mean
+  extracted_value <- exact_extract(lead_rast_masked, st_as_sf(buff_terra), fun = "mean", 
+                                   weights = "area")
+  lead_dat$Pct_Units_Lead[i] <- extracted_value
+  
+  # Convert the raster to a data frame for ggplot2
+  lead_rast_df <- as.data.frame(lead_rast_masked, xy = TRUE)
+  
+  # Plot the results
+  rast_col <- lead_rast[[]]
+  p <- ggplot() +
+    geom_raster(lead_rast_cropped, aes(x = x, y = y, fill = name)) +
+    scale_fill_manual() +
+    geom_sf(data = st_as_sf(buff_terra), fill = NA, color = "red", size = 1) +
+    geom_sf(data = sites[i,], color = "blue", size = 3) +
+    coord_sf(crs = st_crs(lead_rast)) +
+    labs(title = paste("Site:", i),
+         x = "Easting (m)", y = "Northing (m)",
+         fill = "Raster Value") +
+    theme_minimal()
+  
+  # Save the plot
+  ggsave(filename = paste0("plots/plot_site_", i, ".png"), plot = p, width = 8, height = 6)
+  
+  Sys.sleep(2)
+  # print(p)  # Uncomment to plot
+    
+  print(i)
+}
+
+Sys.time()
+
+# Check the final results
+print(lead_dat)
 
 ########################## 2. PM2.5 
 
