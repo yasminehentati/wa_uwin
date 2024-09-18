@@ -77,23 +77,21 @@ usmap <- plot_usmap(exclude = c("Alaska", "Hawaii"),
   )
 usmap
 
-  # study area bounding box 
-?ne_countries
-usmap <- plot(ne_countries(country = "United States of America",
-                             type = "states")) + 
-  usmap_transform(geom_rect(
-    xmin = -123.5,
-    ymin = 46.5,
-    xmax = -119,
-    ymax = 49,
-    fill = NA, 
-    colour = "red",
-    linewidth = 1
-  )) + 
-  coord_sf(crs = st_crs(water))
-?plot_usmap
+  # study area bounding box -- doesnt work
+#usmap <- plot(ne_states(country = "United States of America")) + 
+ # usmap_transform(geom_rect(
+ #   xmin = -123.5,
+ #   ymin = 46.5,
+ #   xmax = -119,
+#    ymax = 49,
+ #   fill = NA, 
+ #   colour = "red",
+ #   linewidth = 1
+ # )) + 
+#  coord_sf(crs = st_crs(water))
 
-?plot_usmap
+
+
 # make the big WA map
 washington <- ggplot(data = wa_crop) +
   geom_sf(fill = "antiquewhite4", color = NA) +
@@ -155,7 +153,7 @@ tract_crop <- ms_erase(wa_tract, water)
 
 env_WA_sp <- st_read(here("data", "env_health_data", "env_health_all_KP.shp"))
 
-
+library(dplyr)
 colnames(env_WA_sp)
 #now lets make one big pollutant dataframe so we can create percentiles for our map 
 
@@ -170,22 +168,19 @@ pollutants <- st_as_sf(env_WA_sp) %>%
   mutate(PNPL_PCT = ntile(env_WA_sp$Av_PNPL, 100)) %>% 
   mutate(TOXIC_PCT = ntile(env_WA_sp$A_RSEI_, 100)) %>% 
   mutate(PWDIS_PCT = ntile(env_WA_sp$A_PWDIS, 100)) %>% 
-  mutate(DIESEL_PCT = ntile(env_WA_sp$ATK2DNO, 100)) 
-
+  mutate(DIESEL_PCT = ntile(env_WA_sp$ATK2DNO, 100)) %>% 
+  mutate(OZONE_PCT = ntile(env_WA_sp$AOCpkm2, 100)) %>% 
+  mutate(PRMP_PCT = ntile(env_WA_sp$AvrPRMP, 100))  
 
 #CALCULATE OUR OWN POLLUTION BURDEN. We will follow WA Env Health Map Methods
-
-#first we need to average the exposures (pm25, diesel, toxic releases)
-# and environmental effects (cleanupsites, lead, gw threat, and hazards for us)
-
-pollutants <- pollutants %>%
-  mutate(EXPOSURE = (PM25_PCT + DIESEL_PCT +  TOXIC_PCT) / 3) %>%
-  # removing groundwater because therea re lots of NAs
-  mutate(EFFECT = (LEAD_PCT + HAZARD_PCT + PNPL_PCT) / 3) %>% 
+#first we need to average the exposures and risks/effects 
+pollutants$OZONE_PCT
+pollutants <- pollutants %>% mutate(EXPOSURE = (PM25_PCT + DIESEL_PCT +  TOXIC_PCT + OZONE_PCT) / 4) %>%
+  mutate(RISK = (LEAD_PCT + HAZARD_PCT + PNPL_PCT + PRMP_PCT / 4)) %>% # removing wastewater because therea re lots of NAs
   #then we need to get the indicator for both. exposure stays the same by effects is given HALF weight. so multiply the EFFECTS COLUMN by .5
-  mutate(EFFECT = EFFECT * 0.5) %>% 
+  mutate(RISK = RISK * 0.5) %>% 
   #BURDEN: now we sum the EXPOSURE AND EFFECT COLUMN (Pollution Burden is calculated as the average of its two component scores, with the Environmental Effects component halfweighted.)
-  mutate(BURDEN = EFFECT + EXPOSURE) %>% 
+  mutate(BURDEN = RISK + EXPOSURE) %>% 
   #THEN WE divide it by the weights. + (1 / .5)
   mutate(BURDEN = BURDEN/1.5) %>% 
   #then we want to scale it (0-10) so find the max and divide it by that number  
@@ -193,6 +188,7 @@ pollutants <- pollutants %>%
   #then we can bin it as a percentile to help with scale
   mutate(BURDEN_PERCENTILE = ntile(BURDEN_SCALED, 100))
 
+pollutants$BURDEN
 class(pollutants)
 pollutants$BURDEN_PERCENTILE
 
@@ -215,7 +211,7 @@ TAWA <- ggplot(data = pollutants) +
   #    limits = factor(c(1, 100)),
     #   oob = scales::squish,
     #   labels = scales::percent,
-    name = "Environmental effects \nburden percentile") +
+    name = "Pollution \nburden percentile") +
   geom_sf(data = st_as_sf(points_wa), size = 2, shape = 23, fill = "black") +
   coord_sf(xlim = c(-122.58,-122.25), ylim= c(47.15,47.35), expand = FALSE) +
   annotate("text", x = -122.48, y = 47.32, label= "Tacoma", fontface = "bold",
