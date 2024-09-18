@@ -491,53 +491,6 @@ cat(paste(paste('Metrics calculated in ', elapsed_time, sep=''), ' minutes', sep
 
 ```
 
-## Combine landscape data 
-```{r}
-
-data_export <- cbind(sites, metrics_comp, metrics_conf)
-data_export
-
-# Make sure 'city' is a factor
-data_export$city <- as.factor(data_export$city)
-
-# add columns combining class areas
-data_export <- data_export %>% 
-  mutate(
-    # all forest types
-    for_all = (for_ever_temp + for_ever_taig + for_ever_trop + for_dec_trop + for_dec_temp + for_mix),
-    # all shrubland types
-    shrub_all = (shrub_trop + shrub_temp + shrub_lich),
-    # all grassland types
-    grass_all = (grass_trop + grass_temp + grass_lich),
-    # all woody vegetation cover types (excluding herbaceous grassland cover)
-    veg_woody = (for_ever_temp + for_ever_taig + for_ever_trop + for_dec_trop + for_dec_temp + for_mix + shrub_trop + shrub_temp + shrub_lich),  
-    # all vegetation cover types (woody and herbaceous). 'Wetland' does not necessarily represent
-    veg_all = (for_ever_temp + for_ever_taig + for_ever_trop + for_dec_trop + for_dec_temp + for_mix + shrub_trop + shrub_temp + shrub_lich + grass_trop + grass_temp + grass_lich),      
-    # all natural/undeveloped/minimally-developed land cover classes
-    natural = (for_ever_temp + for_ever_taig + for_ever_trop + for_dec_trop + for_dec_temp + for_mix + shrub_trop + shrub_temp + grass_trop + grass_temp + shrub_lich + grass_lich + barren_lich + wetland + barren + ice),
-    # anthropogenic land cover types
-    develop = (urban + cropland)
-  ) %>%
-  arrange(city, site)
-
-# make sure the city-site index column is filled
-data_export$city_site <- paste(data_export$city, data_export$site, sep = "_")
-is_us$city_site <- paste(is_us$city, is_us$site, sep = "_")
-is_us$city_site
-
-#  add percent impervious surface
-
-data_export <- data_export %>% arrange(city_site)
-is_all <- is_dat %>% arrange(city_site)
-length(match(unique(data_export$city_site),unique(is_all$city_site))) # make sure all the sites match
-
-# Add the impervious surface percentage
-data_export$Impervious <- is_all$Impervious
-colnames(data_export)
-# remove unneeded columns
-data_export <- data_export %>% dplyr::select(-c(season, species, count, dys_ctv))
-```
-
 ## Calculate relationships between landscape metrics 
 Code adapted from Jeff Haight 
 ### Did not run this 
@@ -768,4 +721,110 @@ Sys.time()
 print(medincome_dat)
 
 write_csv(medincome_dat, here("data", "covariates", "medincome_dat.csv"))
+```
+
+## Calculate site values for NDVI
+Code adapted from Gina Rosa Cova and Travis Gallo
+```{r}
+################################################
+# NDVI
+
+# GEE composite code from Gina Rosa Cova
+# https://code.earthengine.google.com/3a9b724aa57b64d3c54b30249761db56
+# Took ~10 minutes to download 
+# 30m resolution
+
+# NDVI Extraction code from Travis Gallo
+
+# load LandSat NDVI raster from GRC GEE code 
+
+ndvi_kp <- raster(here("data", "NDVI_data", "NDVI2020SEWATAWA3038_1.tif")) 
+
+# reproject points to raster crs 
+sites <- st_transform(sites, crs = st_crs(ndvi_kp))
+
+# extract the proportion of the buffer that has an NDVI greater than 0.2 (vegetation cover)
+# this returns a list, so we can use lapply to calculate the proportion for each site
+
+ndvi_extract <- terra::extract(ndvi_kp, points_wa, buffer = 1000) # in m
+
+# calculate the proportion of a site that is covered in vegetation
+prop_ndvi_greater0.5 <- lapply(ndvi_extract, function (x){
+  # turn values greater than 0.5 to 1 (these are cells that are covered in vegetation)
+  x[which(x > 0.5)] <- 1
+  # turn values less than 0.5 to 0 (these are cells that are not vegetation)
+  x[which(x <= 0.5)] <- 0
+  # proportion of cells that are vegetation
+  sum(x, na.rm = TRUE)/length(x) })
+
+
+# turn list into a vector
+prop_veg_5 <- do.call(c, prop_ndvi_greater0.5)
+prop_veg_5
+
+# calculate the proportion of a site that is covered in vegetation
+prop_ndvi_greater0.6 <- lapply(ndvi_extract, function (x){
+  # turn values greater than 0.6 to 1 (these are cells that are covered in vegetation)
+  x[which(x > 0.6)] <- 1
+  # turn values less than 0.6 to 0 (these are cells that are not vegetation)
+  x[which(x <= 0.6)] <- 0
+  # proportion of cells that are vegetation
+  sum(x, na.rm = TRUE)/length(x) })
+
+
+# turn list into a vector
+prop_veg_6 <- do.call(c, prop_ndvi_greater0.6)
+prop_veg_6
+
+# calculate the proportion of a site that is covered in vegetation
+prop_ndvi_avg <- lapply(ndvi_extract, function (x){
+  mean(x) 
+  })
+
+# turn list into a vector
+prop_veg_avg <- do.call(c, prop_ndvi_avg)
+prop_veg_avg
+
+
+```
+
+## Combine data 
+```{r}
+data_export <- cbind(sites, metrics_comp, metrics_conf, prop_veg_avg,
+                     prop_veg_6, prop_veg_5)
+data_export
+
+data_export <- data_export %>% left_join(medincome_dat, by = c("city", "site")) %>%
+  left_Join(housing_dat, by = c("city", "site"))
+
+# Make sure 'city' is a factor
+data_export$city <- as.factor(data_export$city)
+
+# add columns combining class areas
+data_export <- data_export %>% 
+  mutate(
+    # all forest types
+    for_all = (for_ever_temp + for_ever_taig + for_ever_trop + for_dec_trop + for_dec_temp + for_mix),
+    # all shrubland types
+    shrub_all = (shrub_trop + shrub_temp + shrub_lich),
+    # all grassland types
+    grass_all = (grass_trop + grass_temp + grass_lich),
+    # all woody vegetation cover types (excluding herbaceous grassland cover)
+    veg_woody = (for_ever_temp + for_ever_taig + for_ever_trop + for_dec_trop + for_dec_temp + for_mix + shrub_trop + shrub_temp + shrub_lich),  
+    # all vegetation cover types (woody and herbaceous). 'Wetland' does not necessarily represent
+    veg_all = (for_ever_temp + for_ever_taig + for_ever_trop + for_dec_trop + for_dec_temp + for_mix + shrub_trop + shrub_temp + shrub_lich + grass_trop + grass_temp + grass_lich),      
+    # all natural/undeveloped/minimally-developed land cover classes
+    natural = (for_ever_temp + for_ever_taig + for_ever_trop + for_dec_trop + for_dec_temp + for_mix + shrub_trop + shrub_temp + grass_trop + grass_temp + shrub_lich + grass_lich + barren_lich + wetland + barren + ice),
+    # anthropogenic land cover types
+    develop = (urban + cropland)
+  ) %>%
+  arrange(city, site)
+
+# make sure the city-site index column is filled
+data_export$city_site <- paste(data_export$city, data_export$site, sep = "_")
+
+## export 
+write.csv(data_export,  "data/covariates/sitecov_1000m_sewatawa_allsites.csv", row.names = FALSE)
+
+
 ```
