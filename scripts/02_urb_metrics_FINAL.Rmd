@@ -1,0 +1,162 @@
+---
+title: "02a_urb_metrics_FINAL"
+output: html_document
+date: "2024-09-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Packages 
+```{r}
+library(pacman)
+p_load(dplyr,here,sf,devtools,mapview,here,remotes,tidycensus,crsuggest,
+       tidyr,terra,spatialEco,readr,ggfortify,rgeos,exactextractr,
+       spatstat,spdep,landscapemetrics,tmap,viridis,gghighlight)
+
+```
+
+
+## Read in data 
+```{r}
+# load all sites
+all_sites <- read.csv(here("data", "wa_counts.csv"), stringsAsFactors = FALSE)
+
+# order data by Location Name 
+all_sites <- all_sites[order(all_sites$site),]
+
+# create new column for utm zone 
+
+# transform into UTM - WA
+all_sites <- st_as_sf(all_sites, coords=c("long", "lat"), crs="EPSG:4326")
+#all_sites <- st_transform(all_sites, crs = "EPSG:32610")
+#plot(all_sites)
+mapview(all_sites)
+
+# use utm for geometry
+all_sites <- all_sites %>%
+  st_transform("+proj=utm +zone=10 +datum=WGS84 +units=m")
+
+
+head(all_sites)
+# only keep 1 row for each site 
+points_wa <- all_sites %>% distinct(site, .keep_all = TRUE) 
+
+# check that it looks ok
+mapview(points_wa)
+
+#st_write(points_wa, here("data", "cameras", "points_wa.shp"),
+ #     append = FALSE)
+
+# correct projection
+sites <- points_wa %>% st_transform(crs = "EPSG:32610")
+
+```
+
+# Calculate site values for housing density 
+```{r}
+################################################################################
+## HOUSING DENSITY DATA 
+## read in housing density  data - starting with WA 
+# data from: Silvis lab https://silvis.forest.wisc.edu/data/housing-block-change/
+# Using 2020 data
+
+wa_housing <- st_read(here("data", "housing_maps", 
+                           "WA_block20_change_1990_2020_PLA4.shp"))
+
+# filter to only king and pierce county
+colnames(wa_housing)
+wa_housing <- wa_housing %>% dplyr::filter(substr(BLK20, 1, 5) 
+                                           %in% c("53033", "53053")) # king & pierce counties
+
+# we only need 2010 housing data - select relevant info
+wa_housing <- wa_housing %>% dplyr::select(BLK20, WATER20, POP2020,
+                                           POPDEN2020, HUDEN2020,
+                                           Shape_Leng:geometry)
+
+# crop to actual study area 
+sf_use_s2(FALSE)
+wa_housing <- st_transform(wa_housing, crs=4326)
+wa_housing <- st_crop(wa_housing, c(xmin= -121.7, ymin = 46.7, xmax = -122.8, ymax = 47.8))
+
+st_write(wa_housing, here("data", "housing_maps", "wa_urban_huden_2020.shp"),
+    append = FALSE)
+
+
+# let's make all polygons with water (WATER20) NA so they don't get 
+# counted in the calculation (otherwise will show up at pop den 0)
+wa_housing <- wa_housing %>%
+  mutate(POPDEN2020 = ifelse(WATER20 == 1, NA, POPDEN2020))
+
+
+## now rasterize & calculate site housing density 
+
+# rasterize the data
+st_transform(wa_housing, crs = "EPSG:32610")  
+template <- rast(ext(wa_housing), resolution=100, crs="EPSG:32610")
+rast <- terra::rasterize(vect(wa_housing), template, field = "POPDEN2020")
+
+# initialize new col for data
+housing_dat <- st_drop_geometry(sites) %>%
+  dplyr::mutate(POPDEN2020 = NA_real_)
+
+# set buffer radius
+buffer_radius <- 500
+
+Sys.time()
+
+for (i in 1:nrow(sites)) {
+  pt <- sites[i, ]  # iterate through sites 
+  
+  # create buffer
+  buff <- vect(st_transform(pt, crs(rast)))
+  buff_terra <- terra::buffer(buff, width = buffer_radius) 
+  
+  # need to give it a bit extra extent 
+  buff_ext <- ext(buff_terra) 
+  buff_ext <- ext(c(
+    xmin = buff_ext$xmin - 1000,
+    xmax = buff_ext$xmax + 1000,
+    ymin = buff_ext$ymin - 1000,
+    ymax = buff_ext$ymax + 1000))
+  buff_terra <- crop(buff_terra, buff_ext)
+  
+  # crop and mask the raster 
+  rast_cropped <- crop(rast, buff_terra)
+  rast_masked <- terra::mask(rast_cropped, buff_terra)
+  
+  # xxtract values within the buffer, calculate mean
+  extracted_value <- exact_extract(rast_masked, st_as_sf(buff_terra), fun = "mean", 
+                                   weights = "area")
+  housing_dat$POPDEN2020[i] <- extracted_value
+  
+  
+  # Plot the results
+  
+  p <- ggplot() +
+    geom_raster(rast_cropped, mapping = aes(x = x, y = y, fill = POPDEN2020)) +
+    #   scale_fill_manual() +
+    geom_sf(data = st_as_sf(buff_terra), fill = NA, color = "red", size = 1) +
+    geom_sf(data = sites[i,], color = "blue", size = 3) +
+    coord_sf(crs = st_crs(rast), datum = st_crs(rast)) +
+    labs(title = paste("Site:", i),
+         x = "Easting (m)", y = "Northing (m)",
+         fill = "Raster Value") +
+    theme_minimal()
+  
+  # Save the plot
+  # ggsave(filename = paste0("plots/plot_site_", i, ".png"), plot = p, width = 8, height = 6)
+  print(p) 
+  Sys.sleep(2)
+  print(i)
+}
+
+Sys.time()
+
+# Check the final results
+print(housing_dat)
+
+```
+

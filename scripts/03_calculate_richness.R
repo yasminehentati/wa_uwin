@@ -103,6 +103,8 @@ tawa_vegandf <- vegandf %>% filter(city == "tawa") %>%
   left_join(tawa_sitecovs, by = "site")
 
 write_csv(vegandf, here("data", "covariates", "vegan_sites_all_covs.csv"))
+write_csv(sewa_vegandf, here("data", "covariates", "sewa_vegan_sites_all_covs.csv"))
+write_csv(sewa_vegandf, here("data", "covariates", "tawa_vegan_sites_all_covs.csv"))
 
 # bind wide counts to covariates 
 # add J as well 
@@ -115,4 +117,23 @@ all_wide <- left_join(counts_all, sitecovs, by = c("city", "site")) %>%
 
 write_csv(all_wide, here("data", "covariates", "WIDE_COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
 
-colnames(all_wide)
+# seattle wide data 
+sewa_counts_all <- counts_all %>% filter(city == "sewa") %>%
+  left_join(counts[,c("site","season", "days.active")], 
+                        by = c("site","season"))
+
+sewa_all_wide <- left_join(sewa_counts_all, sewa_sitecovs, by = c("site")) %>%
+  distinct() 
+
+write_csv(sewa_all_wide, here("data", "covariates", "SEWA_WIDE_COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
+
+
+# tacoma wide data
+tawa_counts_all <- counts_all %>% filter(city == "tawa") %>%
+  left_join(counts[,c("site","season", "days.active")], 
+            by = c("site","season"))
+
+tawa_all_wide <- left_join(tawa_counts_all, tawa_sitecovs, by = c("site")) %>%
+  distinct() 
+
+write_csv(tawa_all_wide, here("data", "covariates", "TAWA_WIDE_COUNTS_ALL_ENV_URB_SITES_1000m.csv"))

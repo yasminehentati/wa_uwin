@@ -663,14 +663,14 @@ write_csv(pwdis_dat, here("data", "covariates", "pwdis_dat.csv"))
 
 ## 8. Calculate site values for diesel pollution 
 ```{r}
-head(envdatSP)
+
 # rasterize the data
 template <- rast(ext(envdatSP), resolution=100, crs="EPSG:32610")
-rast <- terra::rasterize(vect(envdatSP), template, field = "avg_diesel_tons_km2")
+rast <- terra::rasterize(vect(envdatSP), template, field = "diesel_tons_km2")
 
 # initialize new col for data
 diesel_dat <- st_drop_geometry(sites) %>%
-  dplyr::mutate(avg_diesel_tons_km2 = NA_real_)
+  dplyr::mutate(diesel_tons_km2 = NA_real_)
 
 # set buffer radius
 buffer_radius <- 500
@@ -700,13 +700,13 @@ for (i in 1:nrow(sites)) {
   # xxtract values within the buffer, calculate mean
   extracted_value <- exact_extract(rast_masked, st_as_sf(buff_terra), fun = "mean", 
                                    weights = "area")
-  diesel_dat$avg_diesel_tons_km2[i] <- extracted_value
+  diesel_dat$diesel_tons_km2[i] <- extracted_value
   
   
   # Plot the results
   
   p <- ggplot() +
-    geom_raster(rast_cropped, mapping = aes(x = x, y = y, fill = avg_diesel_tons_km2)) +
+    geom_raster(rast_cropped, mapping = aes(x = x, y = y, fill = diesel_tons_km2)) +
     #   scale_fill_manual() +
     geom_sf(data = st_as_sf(buff_terra), fill = NA, color = "red", size = 1) +
     geom_sf(data = sites[i,], color = "blue", size = 3) +
@@ -893,7 +893,7 @@ listdfs <- list(lead_dat, pm2.5_dat, ptsdf_dat, traffic_dat,
                 diesel_dat, prmp_dat, ozone_dat)
 
 # combine data by city/site
-pollutants <- listdfs %>% reduce(full_join, by = c("city", "site"))
+pollutants <- listdfs %>% reduce(left_join, by = c("city", "site"))
 
 
 #create percentile for each metric. we'll use this to create the pollution burden score later
