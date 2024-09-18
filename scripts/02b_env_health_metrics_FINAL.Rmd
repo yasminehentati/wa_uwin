@@ -171,7 +171,7 @@ lead_dat <- st_drop_geometry(sites) %>%
   dplyr::mutate(units_lead = NA_real_)
 
 # set buffer radius
-buffer_radius <- 500
+buffer_radius <- 1000
 
 Sys.time()
 
@@ -247,7 +247,7 @@ pm2.5_dat <- st_drop_geometry(sites) %>%
   dplyr::mutate(pm2.5_count = NA_real_)
 
 # set buffer radius
-buffer_radius <- 500
+buffer_radius <- 1000
 
 Sys.time()
 
@@ -318,7 +318,7 @@ ptsdf_dat <- st_drop_geometry(sites) %>%
   dplyr::mutate(avg_ptsdf = NA_real_)
 
 # set buffer radius
-buffer_radius <- 500
+buffer_radius <- 1000
 
 Sys.time()
 
@@ -389,7 +389,7 @@ traffic_dat <- st_drop_geometry(sites) %>%
   dplyr::mutate(prox_heavy_traffic = NA_real_)
 
 # set buffer radius
-buffer_radius <- 500
+buffer_radius <- 1000
 
 Sys.time()
 
@@ -461,7 +461,7 @@ pnpl_dat <- st_drop_geometry(sites) %>%
   dplyr::mutate(avg_pnpl = NA_real_)
 
 # set buffer radius
-buffer_radius <- 500
+buffer_radius <- 1000
 
 Sys.time()
 
@@ -532,7 +532,7 @@ rsei_dat <- st_drop_geometry(sites) %>%
   dplyr::mutate(avg_rsei = NA_real_)
 
 # set buffer radius
-buffer_radius <- 500
+buffer_radius <- 1000
 
 Sys.time()
 
@@ -603,7 +603,7 @@ pwdis_dat <- st_drop_geometry(sites) %>%
   dplyr::mutate(avg_pwdis = NA_real_)
 
 # set buffer radius
-buffer_radius <- 500
+buffer_radius <- 1000
 
 Sys.time()
 
@@ -673,7 +673,7 @@ diesel_dat <- st_drop_geometry(sites) %>%
   dplyr::mutate(diesel_tons_km2 = NA_real_)
 
 # set buffer radius
-buffer_radius <- 500
+buffer_radius <- 1000
 
 Sys.time()
 
@@ -744,7 +744,7 @@ prmp_dat <- st_drop_geometry(sites) %>%
   dplyr::mutate(avg_prmp = NA_real_)
 
 # set buffer radius
-buffer_radius <- 500
+buffer_radius <- 1000
 
 Sys.time()
 
@@ -815,7 +815,7 @@ ozone_dat <- st_drop_geometry(sites) %>%
   dplyr::mutate(avg_ozone = NA_real_)
 
 # set buffer radius
-buffer_radius <- 500
+buffer_radius <- 1000
 
 Sys.time()
 
@@ -892,22 +892,34 @@ listdfs <- list(lead_dat, pm2.5_dat, ptsdf_dat, traffic_dat,
                 pnpl_dat, rsei_dat, pwdis_dat, 
                 diesel_dat, prmp_dat, ozone_dat)
 
-# combine data by city/site
-pollutants <- listdfs %>% reduce(left_join, by = c("city", "site"))
 
+# define a function to keep only desired columns
+keep_columns <- function(df) {
+  df %>%  # Keep city, site, and all other columns
+    { if ("season" %in% colnames(.)) select(., -season) else . } %>%  
+    { if ("species" %in% colnames(.)) select(., -species) else . } %>%   
+    { if ("count" %in% colnames(.)) select(., -count) else . } %>%  
+    { if ("dys_ctv" %in% colnames(.)) select(., -dys_ctv) else . }   
+}
+
+# apply to all dfs in list 
+cleaned_dfs <- map(listdfs, keep_columns)
+
+# combine data by city/site
+pollutants <- cleaned_dfs  %>% reduce(left_join, by = c("city", "site")) 
 
 #create percentile for each metric. we'll use this to create the pollution burden score later
 pollutants <- pollutants %>%
-  mutate(LEAD_PCT = ntile(pollutants$lead_dat, 100)) %>%
-  mutate(PM25_PCT = ntile(pollutants$pm2.5_dat, 100)) %>%
-  mutate(HAZARD_PCT = ntile(pollutants$ptsdf_dat, 100)) %>%
-  mutate(TRAFFIC_PCT = ntile(pollutants$traffic_dat, 100)) %>%
-  mutate(PNPL_PCT = ntile(pollutants$pnpl_dat, 100)) %>% 
-  mutate(TOXIC_PCT = ntile(pollutants$rsei_dat, 100)) %>% 
-  mutate(PWDIS_PCT = ntile(pollutants$pwdis_dat, 100)) %>% 
-  mutate(OZONE_PCT = ntile(pollutants$ozone_dat, 100)) %>% 
-  mutate(PRMP_PCT = ntile(pollutants$prmp_dat, 100)) 
-
+  mutate(LEAD_PCT = ntile(units_lead, 100)) %>%
+  mutate(PM25_PCT = ntile(pm2.5_count, 100)) %>%
+  mutate(PTSDF_PCT = ntile(avg_ptsdf, 100)) %>%
+  mutate(TRAFFIC_PCT = ntile(prox_heavy_traffic, 100)) %>%
+  mutate(PNPL_PCT = ntile(avg_pnpl, 100)) %>% 
+  mutate(TOXIC_PCT = ntile(avg_rsei, 100)) %>% 
+  mutate(PWDIS_PCT = ntile(avg_pwdis, 100)) %>% 
+  mutate(OZONE_PCT = ntile(avg_ozone, 100)) %>% 
+  mutate(DIESEL_PCT = ntile(diesel_tons_km2, 100)) %>% 
+  mutate(PRMP_PCT = ntile(avg_prmp, 100)) 
 
 #first we need to average the exposures (pm25, diesel, toxic releases (RESI), ozone)
 # we'll skip prox traffic because it's too similar to the others
@@ -938,21 +950,35 @@ pollutants <- pollutants %>%
 
 ## seattle 
 
-# combine data by city/site and remove tawa 
-pollutants_sewa <- listdfs %>% reduce(full_join, by = c("city", "site")) %>%
-  filter(city == "sewa")
 
+# Define a function to filter and keep only the desired columns
+keep_columns_sewa <- function(df) {
+  df %>%
+    filter(city == "sewa") %>%  # Filter rows based on the condition
+    { if ("season" %in% colnames(.)) select(., -season) else . } %>%  
+    { if ("species" %in% colnames(.)) select(., -species) else . } %>%   
+    { if ("count" %in% colnames(.)) select(., -count) else . } %>%  
+    { if ("dys_ctv" %in% colnames(.)) select(., -dys_ctv) else . }   
+}
+# Apply the function to each data frame in the list
+cleaned_dfs_sewa <- map(listdfs, keep_columns_sewa)
+
+
+# combine data by city/site and remove tawa 
+pollutants_sewa <- cleaned_dfs_sewa %>% reduce(full_join, by = c("site")) 
+pollutants_sewa
 #create percentile for each metric. we'll use this to create the pollution burden score later
 pollutants_sewa <- pollutants_sewa %>%
-  mutate(SEWA_LEAD_PCT = ntile(pollutants_sewa$lead_dat, 100)) %>%
-  mutate(SEWA_PM25_PCT = ntile(pollutants_sewa$pm2.5_dat, 100)) %>%
-  mutate(SEWA_HAZARD_PCT = ntile(pollutants_sewa$ptsdf_dat, 100)) %>%
-  mutate(SEWA_TRAFFIC_PCT = ntile(pollutants_sewa$traffic_dat, 100)) %>%
-  mutate(SEWA_PNPL_PCT = ntile(pollutants_sewa$pnpl_dat, 100)) %>% 
-  mutate(SEWA_TOXIC_PCT = ntile(pollutants_sewa$rsei_dat, 100)) %>% 
-  mutate(SEWA_PWDIS_PCT = ntile(pollutants_sewa$pwdis_dat, 100)) %>% 
-  mutate(SEWA_OZONE_PCT = ntile(pollutants_sewa$ozone_dat, 100)) %>% 
-  mutate(SEWA_PRMP_PCT = ntile(pollutants_sewa$prmp_dat, 100)) 
+  mutate(SEWA_LEAD_PCT = ntile(units_lead, 100)) %>%
+  mutate(SEWA_PM25_PCT = ntile(pm2.5_count, 100)) %>%
+  mutate(SEWA_PTSDF_PCT = ntile(avg_ptsdf, 100)) %>%
+  mutate(SEWA_TRAFFIC_PCT = ntile(prox_heavy_traffic, 100)) %>%
+  mutate(SEWA_PNPL_PCT = ntile(avg_pnpl, 100)) %>% 
+  mutate(SEWA_TOXIC_PCT = ntile(avg_rsei, 100)) %>% 
+  mutate(SEWA_PWDIS_PCT = ntile(avg_pwdis, 100)) %>% 
+  mutate(SEWA_OZONE_PCT = ntile(avg_ozone, 100)) %>% 
+  mutate(SEWA_DIESEL_PCT = ntile(diesel_tons_km2, 100)) %>% 
+  mutate(SEWA_PRMP_PCT = ntile(avg_prmp, 100)) 
 
 
 #first we need to average the exposures (pm25, diesel, toxic releases (RESI), ozone)
@@ -980,22 +1006,36 @@ pollutants_sewa <- pollutants_sewa %>%
 
 
 ## tacoma 
+
+
+# Define a function to filter and keep only the desired columns
+keep_columns_tawa <- function(df) {
+  df %>%
+    filter(city == "tawa") %>%  # Filter rows based on the condition
+    { if ("season" %in% colnames(.)) select(., -season) else . } %>%  
+    { if ("species" %in% colnames(.)) select(., -species) else . } %>%   
+    { if ("count" %in% colnames(.)) select(., -count) else . } %>%  
+    { if ("dys_ctv" %in% colnames(.)) select(., -dys_ctv) else . }   
+}
+# Apply the function to each data frame in the list
+cleaned_dfs_tawa <- map(listdfs, keep_columns_tawa)
+
+
 # combine data by city/site and remove tawa 
-pollutants_tawa <- listdfs %>% reduce(full_join, by = c("city", "site")) %>%
-  filter(city == "tawa")
+pollutants_tawa <- cleaned_dfs_tawa %>% reduce(full_join, by = c("site")) 
 
 #create percentile for each metric. we'll use this to create the pollution burden score later
 pollutants_tawa <- pollutants_tawa %>%
-  mutate(TAWA_LEAD_PCT = ntile(pollutants_tawa$lead_dat, 100)) %>%
-  mutate(TAWA_PM25_PCT = ntile(pollutants_tawa$pm2.5_dat, 100)) %>%
-  mutate(TAWA_HAZARD_PCT = ntile(pollutants_tawa$ptsdf_dat, 100)) %>%
-  mutate(TAWA_TRAFFIC_PCT = ntile(pollutants_tawa$traffic_dat, 100)) %>%
-  mutate(TAWA_PNPL_PCT = ntile(pollutants_tawa$pnpl_dat, 100)) %>% 
-  mutate(TAWA_TOXIC_PCT = ntile(pollutants_tawa$rsei_dat, 100)) %>% 
-  mutate(TAWA_PWDIS_PCT = ntile(pollutants_tawa$pwdis_dat, 100)) %>% 
-  mutate(TAWA_OZONE_PCT = ntile(pollutants_tawa$ozone_dat, 100)) %>% 
-  mutate(TAWA_PRMP_PCT = ntile(pollutants_tawa$prmp_dat, 100)) 
-
+  mutate(TAWA_LEAD_PCT = ntile(units_lead, 100)) %>%
+  mutate(TAWA_PM25_PCT = ntile(pm2.5_count, 100)) %>%
+  mutate(TAWA_PTSDF_PCT = ntile(avg_ptsdf, 100)) %>%
+  mutate(TAWA_TRAFFIC_PCT = ntile(prox_heavy_traffic, 100)) %>%
+  mutate(TAWA_PNPL_PCT = ntile(avg_pnpl, 100)) %>% 
+  mutate(TAWA_TOXIC_PCT = ntile(avg_rsei, 100)) %>% 
+  mutate(TAWA_PWDIS_PCT = ntile(avg_pwdis, 100)) %>% 
+  mutate(TAWA_OZONE_PCT = ntile(avg_ozone, 100)) %>% 
+  mutate(TAWA_DIESEL_PCT = ntile(diesel_tons_km2, 100)) %>% 
+  mutate(TAWA_PRMP_PCT = ntile(avg_prmp, 100)) 
 
 #first we need to average the exposures (pm25, diesel, toxic releases (RESI), ozone)
 # we'll skip prox traffic because it's too similar to the others
@@ -1004,7 +1044,7 @@ pollutants_tawa <- pollutants_tawa %>%
 # we'll skip wastewater bc we don't have enough data 
 
 pollutants_tawa <- pollutants_tawa %>%
-  mutate(TAWA_EXPOSURE = (TAWA_PM25_PCT + TAWA_DIESEL_PCT +  TAWA_ROXIC_PCT + TAWA_OZONE_PCT) / 4) %>%
+  mutate(TAWA_EXPOSURE = (TAWA_PM25_PCT + TAWA_DIESEL_PCT +  TAWA_TOXIC_PCT + TAWA_OZONE_PCT) / 4) %>%
   mutate(TAWA_RISK = (TAWA_LEAD_PCT + TAWA_PRMP_PCT + TAWA_PTSDF_PCT + TAWA_PNPL_PCT) / 4) %>% 
   
   #then we need to get the indicator for both. exposure stays the same but effects is given HALF weight. so multiply the RISK COLUMN by .5
@@ -1021,13 +1061,18 @@ pollutants_tawa <- pollutants_tawa %>%
   mutate(TAWA_BURDEN_PERCENTILE = ntile(TAWA_BURDEN_SCALED, 100))
 
 
+# write pollutant data 
+write.csv(pollutants, here("data", "covariates", "pollutants_all.csv"))
+write.csv(pollutants_sewa, here("data", "covariates", "sewa_pollutants_all.csv"))
+write.csv(pollutants_tawa, here("data", "covariates", "tawa_pollutants_all.csv"))
 
-# bring in urbanizatioon covariate data and merge 
+## stop here if not merging data 
+# bring in urbanization covariate data and merge 
 
 urbcovs <- read_csv(here("data", "covariates", "sitecov_1000m_sewatawa_allsites.csv"))
 
-sewa_urbcovs <- urb_covs %>% filter(city == "sewa")
-tawa_urbcovs <- urb_covs %>% filter(city == "tawa")
+sewa_urbcovs <- urbcovs %>% filter(city == "sewa")
+tawa_urbcovs <- urbcovs %>% filter(city == "tawa")
 
 all_covs <- left_join(urbcovs, pollutants, by = c("city", "site"))
 sewa_all_covs <- left_join(sewa_urbcovs, pollutants_sewa, by = c("site"))
