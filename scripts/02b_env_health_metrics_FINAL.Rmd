@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(pacman)
 
-p_load(dplyr,sp,raster,here,sf,mapview,rgdal,remotes,tidycensus,
+p_load(dplyr,here,sf,mapview,remotes,tidycensus,
        tidyr,terra,spatialEco,readr,ggfortify,exactextractr,spatstat,
        spdep,landscapemetrics,tmap,viridis,gghighlight,purrr,plainview,tidyterra,
        crsuggest,janitor)
@@ -158,7 +158,6 @@ ggplot(data = envdatSP) +
 
 ```
 
-
 ## 1. Calculate site values for lead risk 
 ```{r}
 
@@ -221,7 +220,6 @@ for (i in 1:nrow(sites)) {
   # ggsave(filename = paste0("plots/plot_site_", i, ".png"), plot = p, width = 8, height = 6)
   print(p) 
   Sys.sleep(2)
-   # Uncomment to plot
     
   print(i)
 }
@@ -232,10 +230,11 @@ Sys.time()
 print(lead_dat)
 
 # save 
-write_csv(lead_dat, here("data", "covariates", "lead_dat.csv"))
+#write_csv(lead_dat, here("data", "covariates", "lead_dat.csv"))
 ```
 
-## 1. Calculate site values for PM2.5
+
+## 2. Calculate site values for PM2.5
 ```{r}
 
 # rasterize the data
@@ -303,8 +302,9 @@ Sys.time()
 print(pm2.5_dat)
 
 # save
-write_csv(pm2.5_dat, here("data", "covariates", "pm2.5_dat.csv"))
+#write_csv(pm2.5_dat, here("data", "covariates", "pm2.5_dat.csv"))
 ```
+
 
 ## 3. Calculate site values for proximity to hazardous waste (PTSDF)
 ```{r}
@@ -374,8 +374,9 @@ Sys.time()
 print(ptsdf_dat)
 
 # write 
-write_csv(ptsdf_dat, here("data", "covariates", "ptsdf_dat.csv"))
+#write_csv(ptsdf_dat, here("data", "covariates", "ptsdf_dat.csv"))
 ```
+
 
 ## 4. Calculate site values for proximity to heavy traffic roadways
 ```{r}
@@ -446,8 +447,9 @@ print(traffic_dat)
 
 
 # save 
-write_csv(traffic_dat, here("data", "covariates", "traffic_dat.csv"))
+#write_csv(traffic_dat, here("data", "covariates", "traffic_dat.csv"))
 ```
+
 
 ## 5. Calculate site values for proximity to Superfund sites 
 ```{r}
@@ -517,8 +519,9 @@ Sys.time()
 print(pnpl_dat)
 
 # save 
-write_csv(pnpl_dat, here("data", "covariates", "pnpl_dat.csv"))
+#write_csv(pnpl_dat, here("data", "covariates", "pnpl_dat.csv"))
 ```
+
 
 ## 6. Calculate site values for proximity to toxic release facilities
 ```{r}
@@ -588,8 +591,9 @@ Sys.time()
 print(rsei_dat)
 
 # save 
-write_csv(rsei_dat, here("data", "covariates", "rsei_dat.csv"))
+#write_csv(rsei_dat, here("data", "covariates", "rsei_dat.csv"))
 ```
+
 
 ## 7. Calculate site values for wastewater discharge 
 ```{r}
@@ -658,8 +662,9 @@ Sys.time()
 # Check the final results
 print(pwdis_dat)
 
-write_csv(pwdis_dat, here("data", "covariates", "pwdis_dat.csv"))
+#write_csv(pwdis_dat, here("data", "covariates", "pwdis_dat.csv"))
 ```
+
 
 ## 8. Calculate site values for diesel pollution 
 ```{r}
@@ -729,8 +734,9 @@ Sys.time()
 print(diesel_dat)
 
 #save 
-write_csv(diesel_dat, here("data", "covariates", "diesel_dat.csv"))
+#write_csv(diesel_dat, here("data", "covariates", "diesel_dat.csv"))
 ```
+
 
 ## 9. Calculate site values for proximity to PRMP sites 
 ```{r}
@@ -800,8 +806,9 @@ Sys.time()
 print(prmp_dat)
 
 # save
-write_csv(prmp_dat, here("data", "covariates", "prmp_dat.csv"))
+#write_csv(prmp_dat, here("data", "covariates", "prmp_dat.csv"))
 ```
+
 
 ## 10. Calculate site values for ozone 
 ```{r}
@@ -872,8 +879,9 @@ print(ozone_dat)
 
 
 # save
-write_csv(ozone_dat, here("data", "covariates", "ozone_dat.csv"))
+#write_csv(ozone_dat, here("data", "covariates", "ozone_dat.csv"))
 ```
+
 
 
 
@@ -1099,6 +1107,7 @@ write_csv(sewa_all_data, here("data", "covariates", "SEWA_COUNTS_ALL_ENV_URB_SIT
 write_csv(tawa_all_data, here("data", "covariates", "TAWA_COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
 
 ```
+
 
 ## extra code 
 ```{r}

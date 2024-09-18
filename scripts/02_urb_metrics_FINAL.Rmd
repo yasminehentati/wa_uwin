@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(pacman)
 p_load(dplyr,here,sf,devtools,mapview,here,remotes,tidycensus,crsuggest,
-       tidyr,terra,spatialEco,readr,ggfortify,rgeos,exactextractr,
+       tidyr,terra,spatialEco,readr,ggfortify,exactextractr,
        spatstat,spdep,landscapemetrics,tmap,viridis,gghighlight)
 
 ```
@@ -89,11 +89,12 @@ st_write(wa_housing, here("data", "housing_maps", "wa_urban_huden_2020.shp"),
 wa_housing <- wa_housing %>%
   mutate(POPDEN2020 = ifelse(WATER20 == 1, NA, POPDEN2020))
 
+mapview(wa_housing)
 
 ## now rasterize & calculate site housing density 
 
 # rasterize the data
-st_transform(wa_housing, crs = "EPSG:32610")  
+wa_housing <- st_transform(wa_housing, crs = "EPSG:32610")  
 template <- rast(ext(wa_housing), resolution=100, crs="EPSG:32610")
 rast <- terra::rasterize(vect(wa_housing), template, field = "POPDEN2020")
 
@@ -155,8 +156,6 @@ for (i in 1:nrow(sites)) {
 Sys.time()
 
 # Check the final results
-print(housing_dat)
-
 
 write_csv(housing_dat, here("data", "covariates", "housing_dat.csv"))
 ```
@@ -166,8 +165,12 @@ write_csv(housing_dat, here("data", "covariates", "housing_dat.csv"))
 Code adapted from Jeff Haight 
 ```{r}
 # NLCD landcover 
-nalc <- rast("data/landcover/USA_NALCMS_landcover_2015v3_30m.tif") %>%
-  crop(ext(wa_housing)) %>% terra::project("EPSG:32610")
+
+# put 
+nalc <- rast("data/landcover/USA_NALCMS_landcover_2015v3_30m.tif")  %>% terra::project("EPSG:32610")
+
+wa_housing <- st_transform(wa_housing, crs = "EPSG:32610")  
+nalc <- nalc %>% crop(ext(wa_housing))
 
 # impervious surface cover for the Contiguous US
 is <-rast("data/NLCD_imp/nlcd_2019_impervious_descriptor_l48_20210604.img") %>%

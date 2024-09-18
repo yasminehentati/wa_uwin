@@ -1,0 +1,75 @@
+city,site,season,species,count,days.active,POPDEN2020
+tawa,B-TP,Summer19,Coyote,1,35,1109.688232421875
+sewa,BGP1,Fall19,Virginia opossum,1,32,3211.529052734375
+sewa,BRF1,Spring19,Raccoon,3,38,1120.312744140625
+sewa,DOS1,Fall19,Virginia opossum,1,36,508.2406005859375
+sewa,DRP2,Fall19,Raccoon,55,31,4354.4560546875
+sewa,DSP1,Fall19,Virginia opossum,14,31,234.13613891601563
+sewa,DWP1,Fall19,Raccoon,5,36,930.53076171875
+sewa,FGL1,Fall19,Raccoon,1,28,1180.5966796875
+sewa,FRD1,Fall19,Coyote,1,35,56.1112060546875
+tawa,G-CBP1,Winter19,Coyote,6,35,2397.47265625
+tawa,G-CLP3,Spring19,Douglas squirrel,3,38,1536.137939453125
+tawa,G-FP1,Spring19,Eastern gray squirrel,105,37,2293.822998046875
+tawa,G-IP,Spring20,Eastern gray squirrel,15,40,1004.7882690429688
+tawa,G-JP,Spring19,Eastern gray squirrel,20,10,2645.552001953125
+tawa,G-KP1,Spring19,Coyote,2,36,2005.3167724609375
+tawa,G-OTP,Spring19,Coyote,1,33,1768.3106689453125
+tawa,G-SB,Spring19,Douglas squirrel,15,37,1100.23974609375
+tawa,G-SERA,Spring20,Coyote,4,50,1671.4864501953125
+tawa,G-SP,Winter19,Eastern gray squirrel,48,15,2579.303466796875
+tawa,G-TNC1,Winter19,Eastern gray squirrel,1,29,1538.071044921875
+tawa,G-VP,Spring19,Coyote,1,37,1917.8668212890625
+tawa,G-WLP1,Winter19,Coyote,1,28,2490.780029296875
+tawa,G-WP2,Spring19,Coyote,2,37,1565.4117431640625
+sewa,HCN1,Fall19,River otter,1,36,843.69647216796875
+sewa,HFW1,Fall19,Coyote,2,33,1690.0123291015625
+sewa,IRP1,Fall19,Coyote,8,31,2392.120361328125
+sewa,JBP1,Fall19,Coyote,2,46,1637.7061767578125
+sewa,LTP1,Spring19,Raccoon,7,34,3254.859130859375
+sewa,LWP2,Summer19,Eastern gray squirrel,7,23,3207.26416015625
+sewa,MBC1,Fall19,Black-tailed deer,6,31,551.281982421875
+sewa,MGP1,Fall19,Raccoon,1,31,411.9508972167969
+sewa,MPO1,Fall19,Virginia opossum,3,35,544.084716796875
+sewa,MSR1,Fall19,Raccoon,1,36,2159.53466796875
+sewa,MWP1,Spring19,Virginia opossum,2,32,1261.38916015625
+sewa,NRP1,Fall19,Coyote,1,31,1750.9127197265625
+tawa,P-BLP,Spring19,Coyote,1,35,1538.92529296875
+tawa,P-CCP,Spring19,Coyote,2,15,754.4031982421875
+tawa,P-CUP,Spring19,Coyote,16,38,2166.709228515625
+tawa,P-DPV,Spring19,Eastern gray squirrel,27,37,0
+tawa,P-GP,Spring19,Coyote,4,38,3156.257080078125
+tawa,P-GW1,Winter19,Coyote,3,29,356.4075927734375
+tawa,P-JCP,Winter19,Eastern gray squirrel,19,15,2232.93505859375
+tawa,P-LCC,Spring19,Coyote,1,10,785.47064208984375
+tawa,P-MCP,Spring19,Eastern gray squirrel,20,38,3751.208984375
+tawa,P-MKP2,Spring19,Eastern gray squirrel,18,33,1151.49658203125
+tawa,P-OB,Spring19,Eastern gray squirrel,16,37,0
+tawa,P-OLT,Spring19,Coyote,6,36,28.50969696044922
+tawa,P-OV1,Winter19,Bobcat,2,28,14.459115028381348
+tawa,P-PCNA2,Spring19,Coyote,1,38,1916.34228515625
+tawa,P-PDP,Spring19,Coyote,1,37,881.92449951171875
+tawa,P-RP,Spring19,Coyote,7,38,1890.91357421875
+tawa,P-RT,Spring19,Eastern gray squirrel,7,35,841.8880615234375
+tawa,P-RWSR,Spring19,Coyote,35,36,43.05598831176758
+tawa,P-SCP2,Spring19,Eastern gray squirrel,8,24,1460.7215576171875
+tawa,P-STP,Spring19,Coyote,1,38,1657.57177734375
+tawa,P-TE1,Spring19,Douglas squirrel,3,23,55.779075622558594
+tawa,P-UCC,Spring19,Coyote,1,30,271.7707214355469
+tawa,P-UWT,Spring20,Eastern gray squirrel,8,49,2291.3662109375
+tawa,P-WBC,Spring19,Eastern gray squirrel,59,35,1816.9703369140625
+tawa,P-WP,Spring19,Eastern gray squirrel,43,16,4567.5498046875
+tawa,P-WWP,Spring19,Coyote,4,35,1124.807373046875
+sewa,PGP1,Spring19,Eastern gray squirrel,1,29,1551.3125
+sewa,PHN1,Fall19,Raccoon,3,31,4215.4912109375
+sewa,RHF1,Fall19,Virginia opossum,2,36,62.35608673095703
+sewa,RVP1,Fall19,Coyote,2,31,6025.02001953125
+sewa,RWP1,Fall19,Virginia opossum,4,31,150.30577087402344
+sewa,SVP1,Fall19,Coyote,4,31,165.68753051757813
+sewa,SWD1,Fall19,Coyote,4,32,1405.3214111328125
+sewa,TCC1,Fall19,Coyote,1,36,2001.05615234375
+sewa,TMF1,Fall19,Bobcat,1,35,45.13754653930664
+sewa,TMP1,Fall19,Raccoon,10,41,601.125
+sewa,TRN1,Fall19,Virginia opossum,2,35,109.91925048828125
+sewa,WCP2,Spring20,Raccoon,1,30,1364.0355224609375
+sewa,WDG1,Fall19,Eastern gray squirrel,2,36,1065.21337890625
