@@ -18,40 +18,64 @@ library(crsuggest)
 
 ##
 ## read in data 
-
-
+library(dplyr)
+library(janitor)
 # read in env health data 
-lead <- read_csv(here("data", "env_health_data", "Lead_Risk_from_Housing.csv"),
-                 col_names=c("County_Name", "Census_Tract", "Units_Lead", "Total_Units", "Pct_Units_Lead", "IBL_Rank"))
+
+lead <- read_csv(here("data", "env_health_data", "Lead_Risk_from_Housing.csv"), 
+                 name_repair = janitor::make_clean_names) %>% 
+  select(census_tract, number_units_w_lead_hazard_estimated)
+          #        col_select = c("County_Name", "Census_Tract", "Units_Lead", 
+              #                 "Total_Units", "Pct_Units_Lead", "IBL_Rank"))
+colnames(lead)
 
 pm25 <- read_csv(here("data", "env_health_data", "PM2.5_Concentration.csv"), 
-                 col_names=c("County_Name", "YearGroup", "Census_Tract", "PM2.5_Count", "IBL_Rank"))
+                 name_repair = janitor::make_clean_names) %>% 
+  select(census_tract, count)
+             #    col_names=c("County_Name", "YearGroup", "Census_Tract", "PM2.5_Count", "IBL_Rank"))
 
 prox_haz_waste <- read_csv(here("data", "env_health_data", 
-                                "Proximity_to_Hazardous_Waste_Treatment_Storage_and_Disposal_Facilities_(TSDFs).csv"),
-                           col_names=c("County_Name", "Census_Tract", "Average_PTSDF", "IBL_Rank"))
+                                "Proximity_to_Hazardous_Waste_Treatment_Storage_and_Disposal_Facilities_(TSDFs).csv"), 
+                           name_repair = janitor::make_clean_names) %>% 
+  select(census_tract, average_ptsdf)
+# col_names=c("County_Name", "Census_Tract", "Average_PTSDF", "IBL_Rank"))
 
 prox_heavy_traff <- read_csv(here("data", "env_health_data", 
-                                          "Proximity_to_Heavy_Traffic_Roadways.csv"),
-                                     col_names=c("County_Name", "Census_Tract", "Prox_Heavy_Traffic_Roadways", "IBL_Rank"))
+                                          "Proximity_to_Heavy_Traffic_Roadways.csv"), 
+                                  name_repair = janitor::make_clean_names) %>% 
+  select(census_tract, proximity_to_heavy_traffic_roadways)
+                             #     col_names=c("County_Name", "Census_Tract", "Prox_Heavy_Traffic_Roadways", "IBL_Rank"))
 
-prox_superfund <- read_csv(here("data", "env_health_data", "Proximity_to_National_Priorities_List_Facilities_(Superfund_Sites).csv"),
-                           col_names=c("County_Name", "Census_Tract", "Average_PNPL", "IBL_Rank"))
+prox_superfund <- read_csv(here("data", "env_health_data", "Proximity_to_National_Priorities_List_Facilities_(Superfund_Sites).csv"), 
+                           name_repair = janitor::make_clean_names) %>% 
+select( census_tract, average_pnpl)
+# col_names=c("County_Name", "Census_Tract", "Average_PNPL", "IBL_Rank"))
 
-toxic_release <- read_csv(here("data", "env_health_data", "Toxic_Releases_from_Facilities_(RSEI_Model).csv"),
-                          col_names=c("County_Name", "Census_Tract", "Average_RSEI_Concentrations", "IBL_Rank"))
+toxic_release <- read_csv(here("data", "env_health_data", "Toxic_Releases_from_Facilities_(RSEI_Model).csv"), 
+                          name_repair = janitor::make_clean_names) %>% 
+  select(census_tract, average_rsei_concentrations)
+# col_names=c("County_Name", "Census_Tract", "Average_RSEI_Concentrations", "IBL_Rank"))
 
-wastewater <- read_csv(here("data", "env_health_data", "Wastewater_Discharge.csv"),
-                       col_names=c("County_Name", "Census_Tract", "Average_PWDIS", "IBL_Rank"))
+wastewater <- read_csv(here("data", "env_health_data", "Wastewater_Discharge.csv"), 
+                       name_repair = janitor::make_clean_names)  %>% 
+  select(census_tract, average_pwdis)
+# col_names=c("County_Name", "Census_Tract", "Average_PWDIS", "IBL_Rank"))
 
-diesel_nox <- read_csv(here("data", "env_health_data", "Proximity_to_Risk_Management_Plan_(RMP)_Facililties.csv"),
-                       col_names=c("County_Name", "Census_Tract", "Annual Tons Km2 Diesel NOx", "IBL_Rank"))
+diesel_nox <- read_csv(here("data", "env_health_data", "Diesel_Emission_Levels_of_NOx_(Annual_Tons_Km2).csv"), 
+                       name_repair = janitor::make_clean_names) %>% 
+  select(census_tract, annual_tons_km2)
+# col_names=c("County_Name", "Census_Tract", "Annual Tons Km2 Diesel NOx", "IBL_Rank"))
 
-prox_rmp <- read_csv(here("data", "env_health_data", "Diesel_Emission_Levels_of_NOx_(Annual_Tons_Km2).csv"),
-                       col_names=c("County_Name", "Census_Tract", "Average PRMP", "IBL_Rank"))
+prox_rmp <- read_csv(here("data", "env_health_data", "Proximity_to_Risk_Management_Plan_(RMP)_Facililties.csv"), 
+                     name_repair = janitor::make_clean_names) %>% 
+  select(census_tract, average_prmp)
+#  col_names=c("County_Name", "Census_Tract", "Average PRMP", "IBL_Rank"))
 
-ozone <- read_csv(here("data", "env_health_data", "Ozone_Concentration.csv"),
-                     col_names=c("County_Name", "Census_Tract", "Average Ozone Concentration ppb km2", "IBL_Rank"))
+ozone <- read_csv(here("data", "env_health_data", "Ozone_Concentration.csv"), 
+                  name_repair = janitor::make_clean_names) %>% 
+  select(census_tract, average_ozone_concentration_ppm_km2)
+
+# col_names=c("County_Name", "Census_Tract", "Average Ozone Concentration ppb km2", "IBL_Rank"))
 
 # combine all into one DF 
 
@@ -60,44 +84,53 @@ listdf <- list(lead, pm25, prox_haz_waste, prox_heavy_traff, prox_superfund,
                toxic_release, wastewater, diesel_nox, prox_rmp, ozone)
 
 # remove ranking number 
-listdf2 <- lapply(listdf, subset, select = -IBL_Rank)
+#listdf <- lapply(listdf, subset, select = -county_name)
 
 # combine data by GEOID 
-envdat <- listdf2 %>% reduce(full_join, by = c("Census_Tract", "County_Name"))
+envdat <- listdf %>% reduce(full_join, by = "census_tract")
 
-# remove first two rows 
-envdat <- tail(envdat, -2)
+# remove first row
+envdat <- tail(envdat, -1)
 
 #get only our counties of interest 
-envdat <- envdat %>% dplyr::filter(substr(Census_Tract, 1, 5) 
+envdat <- envdat %>% dplyr::filter(substr(census_tract, 1, 5) 
                                  %in% c("53033", "53053", # king pierce 
                                          "53061", "53035", # snoho kitsap
                                         "53029", "53057")) # island skagit
 
 
-# rename census tract to geoid 
-envdat <- rename(envdat,c("GEOID" = "Census_Tract"))
+# rename census tract to geoid and rename pollution columns to be a bit more concise 
+envdat <- rename(envdat,c("GEOID" = "census_tract", 
+                          "units_with_lead" = "number_units_w_lead_hazard_estimated",
+                          "pm2.5_count" = "count",
+                          "avg_ptsdf" = "average_ptsdf",
+                          "prox_heavy_traffic" = "proximity_to_heavy_traffic_roadways",
+                          "avg_pnpl" = "average_pnpl",
+                          "avg_rsei" = "average_rsei_concentrations",
+                         "avg_pwdis" = "average_pwdis",
+                         "diesel_tons_km2" = "annual_tons_km2",
+                         "avg_prmp" = "average_prmp",
+                          "avg_ozone" = "average_ozone_concentration_ppm_km2")) 
 
-envdat$Pct_Units_Lead
 ## create polygons for env health data based on geoids 
 # we'll use the income data to do this 
 
 # read in income data
-tractsKP <- st_read(here("data", "income_maps", "seatac_urban_med_income.shp")) 
+tractsKP <- st_read(here("data", "income_maps", "seatac_urban_med_income.shp")) %>% 
+  st_transform(crs = "EPSG:32610")
 
-colnames(tractsKP)
+st_crs(tractsKP)
 # merge env health data to polygons 
 
-# join based on GEOID and put in right projection
+# join based on GEOID
 envdatSP <- merge(tractsKP, envdat, by = "GEOID") %>% 
-  st_as_sf() %>%
-  st_transform(crs = 32610)
-colnames(envdatSP)
+  st_as_sf()
 
-mapview(envdatSP)
+st_crs(envdatSP)
+
 
 # write shapefile for our env health metrics 
-#st_write(envdatSP, here("data", "env_health_data", "env_health_all_KP.shp"), append = FALSE)
+st_write(envdatSP, here("data", "env_health_data", "env_health_all_KP.shp"), append = FALSE)
 
 ##### read in camera data so we have our points for the buffers 
 # same proj 
@@ -106,22 +139,16 @@ sites <- st_read("data/cameras/points_wa.shp")
                   
 
 envdatSP
+
 # plot one of our variables to check 
 mapview(list(sites, envdatSP),
-        zcol = list(NULL, "Average_PNPL"))
+        zcol = list(NULL, "avg_pnpl"))
 
-
-st_crs(envdatSP) == st_crs(lead_rast)
-
-# Plot
 ggplot(data = envdatSP) +
-  geom_sf(aes(fill = Pct_Units_Lead)) +
+  geom_sf(aes(fill = units_with_lead)) +
   theme_minimal() +
-  labs(fill = "My Variable")
+  labs(fill = "number units with lead hazard")
 
-plot(envdatSP, fill = "Pct_Units_Lead")
-
-plot(st_geometry(envdatSP), col = "lightgrey", main = "Pct_Units_Lead")
 
 ########### transform polygon into raster for each variable
 
@@ -223,19 +250,25 @@ ggplot() +
 
 #### 1. Lead risk 
 head(envdatSP)
+envdatSP$avg_ptsdf
 
 template <- rast(ext(envdatSP), resolution=100, crs="EPSG:32610")
+head(envdatSP)
+lead_rast <- terra::rasterize(vect(envdatSP), template, field = "units_with_lead")
 
-lead_rast <- terra::rasterize(vect(envdatSP), template, field = "Pct_Units_Lead")
+mapview(lead_rast)
+mapview(envdatSP, zcol = "diesel_tons_km2")
+
 
 # initialize new col for data
 lead_dat <- st_drop_geometry(sites) %>%
-  dplyr::mutate(Pct_Units_Lead = NA_real_)
+  dplyr::mutate(units_lead = NA_real_)
 
 # set buffer radius
 buffer_radius <- 500
 
 Sys.time()
+
 ############
 for (i in 1:nrow(sites)) {
   pt <- sites[i, ]  # iterate through sites 
@@ -260,16 +293,16 @@ for (i in 1:nrow(sites)) {
   # Extract values within the buffer and compute the mean
   extracted_value <- exact_extract(lead_rast_masked, st_as_sf(buff_terra), fun = "mean", 
                                    weights = "area")
-  lead_dat$Pct_Units_Lead[i] <- extracted_value
+  lead_dat$units_lead[i] <- extracted_value
   
   # Convert the raster to a data frame for ggplot2
   lead_rast_df <- as.data.frame(lead_rast_masked, xy = TRUE)
   
   # Plot the results
-  rast_col <- lead_rast[[]]
+  
   p <- ggplot() +
-    geom_raster(lead_rast_cropped, aes(x = x, y = y, fill = name)) +
-    scale_fill_manual() +
+    geom_raster(lead_rast_cropped, mapping = aes(x = x, y = y, fill = units_with_lead)) +
+  #   scale_fill_manual() +
     geom_sf(data = st_as_sf(buff_terra), fill = NA, color = "red", size = 1) +
     geom_sf(data = sites[i,], color = "blue", size = 3) +
     coord_sf(crs = st_crs(lead_rast)) +
@@ -279,10 +312,10 @@ for (i in 1:nrow(sites)) {
     theme_minimal()
   
   # Save the plot
-  ggsave(filename = paste0("plots/plot_site_", i, ".png"), plot = p, width = 8, height = 6)
-  
+  # ggsave(filename = paste0("plots/plot_site_", i, ".png"), plot = p, width = 8, height = 6)
+  print(p) 
   Sys.sleep(2)
-  # print(p)  # Uncomment to plot
+   # Uncomment to plot
     
   print(i)
 }
@@ -294,7 +327,7 @@ print(lead_dat)
 
 ########################## 2. PM2.5 
 
-pm25_rast <- terra::rasterize(vect(envdatSP), template, field = "PM2.5_Count")
+pm25_rast <- terra::rasterize(vect(envdatSP), template, field = "pm2.5_count")
 
 # reproject 
 pm25_rast <- terra::project(pm25_rast, "EPSG:32610")

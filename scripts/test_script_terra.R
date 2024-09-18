@@ -81,8 +81,9 @@ legend("topright",
 # Add the buffer layer
 
 plot(buff_terra, add = TRUE, border = "red", col = NA)
-
+lead_dat$site
 lead_rast
+
 ############
 for (i in 1:nrow(sites)) {
   pt <- sites[i, ]  # iterate through sites 
