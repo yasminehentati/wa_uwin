@@ -3,12 +3,9 @@
 #################      Step 3: Explore Data      ###############################
 ################################################################################
 # packages
-library(car)
-library(MASS)
-library(lme4)
-library(readr)
-library(here)
 
+library(pacman)
+p_load(car,MASS,lme4,readr,here)
 
 # read in count and covariate data 
 all_dat <- read_csv(here("data", "covariates", "WIDE_COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
@@ -24,12 +21,12 @@ hist(all_dat_veg$richness)
 
 
 
-all_dat$Coyote2 <- all_dat$Coyote+0.00001
+all_dat$Raccoon <- all_dat$Raccoon+0.00001
 
 # look at distribution of data 
 
-qqp(all_dat_veg$richness, "norm")
-qqp(all_dat_veg$richness, "lnorm")
+qqp(all_dat$Raccoon, "norm")
+qqp(all_dat$Raccoon, "lnorm")
 
 # qqp requires estimates of the parameters of the negative binomial, Poisson
 # and gamma distributions. You can generate estimates using the fitdistr

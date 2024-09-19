@@ -8,22 +8,413 @@ date: "2024-06-04"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Packages
+```{r}
+
+# reinstall matrix from source (if needed)
+#installed.packages() |> as.data.frame() |> subset(Package=="Matrix", select = c(LibPath, Version))
+remotes::install_version("Matrix", version = "1.6-3")
+
+#library(pacman)
+#install.packages("TMB",type="source")
+installed.packages() |> as.data.frame() |> subset(Package=="Matrix", select=c(Package, LibPath, Version))
+
+#install.packages("glmmTMB")
+
+install.packages("Matrix", type = "source")
+install.packages("TMB", type = "source")
+install.packages("RccpEigen", type = "source")
+install.packages("glmmTMB", type = "source")
+library("glmmTMB")
+
+library(pacman)
+p_load(corrplot,glmmTMB,AICcmodavg,sjPlot,DHARMa,MuMIn,ggplot2,janitor,dplyr,tidyr,
+       readr,here,viridis)
+
+
+
+```
+
+## Read in data 
+```{r}
+
+# our new make names function
+make_names <- function(x) {
+  gsub("\\.", "_", make.names(gsub("*.csv$", "", x)))
+}
+
+
+# read in count and covariate data -- both cities
+all_dat <- read_csv(here("data", "covariates", "WIDE_COUNTS_ALL_ENV_URB_SITES_1000m.csv")) %>%
+  subset(season != "Spring20" & 
+           season != "Fall20" & 
+           season != "Summer20") %>%# %>% keep only win19-win20
+  # subset(site != "P-OV1" & site != "P-TE1" & site != "P-RWSR" & site != "P-OLT")
+#   clean_names() # make spaces underscores %>% 
+ rename_with(janitor::make_clean_names, all_of(1:23)) %>% 
+  filter(days_active != 0)# make spaces underscores for spp names (without janitor) %>%
+
+
+all_dat_sewa <- read_csv(here("data", "covariates", "SEWA_WIDE_COUNTS_ALL_ENV_URB_SITES_1000m.csv")) %>%
+  subset(season != "Spring20" & 
+           season != "Fall20" & 
+           season != "Summer20") %>%# %>% keep only win19-win20
+  # subset(site != "P-OV1" & site != "P-TE1" & site != "P-RWSR" & site != "P-OLT")
+#   clean_names() # make spaces underscores %>% 
+ rename_with(janitor::make_clean_names, all_of(1:23)) %>% # make spaces underscores for spp names (without janitor) 
+filter(days_active != 0)
+
+all_dat_tawa <- read_csv(here("data", "covariates", "TAWA_WIDE_COUNTS_ALL_ENV_URB_SITES_1000m.csv")) %>%
+  subset(season != "Spring20" & 
+           season != "Fall20" & 
+           season != "Summer20") %>%# %>% keep only win19-win20
+  # subset(site != "P-OV1" & site != "P-TE1" & site != "P-RWSR" & site != "P-OLT")
+#   clean_names() # make spaces underscores %>% 
+ rename_with(janitor::make_clean_names, all_of(1:23)) %>% # make spaces underscores for spp names (without janitor)
+  filter(days_active != 0)
+
+# read in richness/diversity data 
+all_dat_veg <- read_csv(here("data", "covariates", "vegan_sites_all_covs.csv")) 
+all_dat_veg_sewa <- read_csv(here("data", "covariates", "sewa_vegan_sites_all_covs.csv")) 
+all_dat_veg_tawa <- read_csv(here("data", "covariates", "tawa_vegan_sites_all_covs.csv")) 
+
+# make things factors
+all_dat$city <- as.factor(all_dat$city)
+all_dat$season <- as.factor(all_dat$season)
+all_dat$site <- as.factor(all_dat$site)
+
+all_dat_sewa$city <- as.factor(all_dat_sewa$city)
+all_dat_sewa$season <- as.factor(all_dat_sewa$season)
+all_dat_sewa$site <- as.factor(all_dat_sewa$site)
+
+all_dat_tawa$city <- as.factor(all_dat_tawa$city)
+all_dat_tawa$season <- as.factor(all_dat_tawa$season)
+all_dat_tawa$site <- as.factor(all_dat_tawa$site)
+
+# make things factors
+all_dat_veg_sewa$city <- as.factor(all_dat_veg_sewa$city)
+all_dat_veg_tawa$site <- as.factor(all_dat_veg_tawa$site)
+
+# data will be scaled in model so we don't need to do it now
+```
+
+## Variable distribution plots 
+```{r}
+# let's create a data set with only 1 row per site
+all_cov <- all_dat %>% distinct(site, .keep_all = TRUE) %>%
+    mutate(city = as.character(city)) %>% 
+    mutate(city = dplyr::recode(city, sewa = "Seattle",tawa = "Tacoma")) # rename cities for better labels
+
+# look at pollution burden distributions
+burden_plot <- all_cov %>%
+  ggplot(aes(x = BURDEN_PERCENTILE)) +
+  geom_histogram(fill = "white", colour = "black") +
+  facet_grid(city ~ .)
+
+impervious_veg <- all_cov %>%
+  ggplot(aes(x = Impervious, y = prop_ndvi_avg)) +
+  geom_point(color = "red") +  # Set point color
+  labs(x = "impervious", y = "NDVI") 
+
+
+# let's create a box plot showing the distribution of our variables
+# for each city 
+
+# environmental exposures  
+
+
+```
+
+## Correlation plots 
+```{r}
+
+# let's rename all variables for ease of plotting correlations
+
+
+## Correlation plots 
+colnames(all_dat)
+cordat <- all_dat %>% distinct(site, .keep_all = TRUE) %>% 
+  mutate(city = as.character(city)) %>% 
+  mutate(city = dplyr::recode(city, sewa = "Seattle",tawa = "Tacoma")) %>%
+  dplyr::select(c(
+    natural,
+     # urban,
+     Impervious,
+     # prop_ndvi_avg,
+     POPDEN2020,
+     med_income,
+     prox_heavy_traffic,
+     pm2.5_count,
+     diesel_tons_km2,
+     avg_rsei,
+     avg_ozone,
+     avg_ptsdf,
+     units_lead,
+     avg_pnpl,
+     avg_prmp
+    #     "Wastewater discharge" = avg_pwdis
+  )) %>%
+  rename("Natural land cover" = natural ,
+     #    "Urban land cover (NLCD)" = urban,
+         "Median income" = med_income,
+         "Impervious surface" = Impervious,
+     #    "Average NDVI" = prop_ndvi_avg,
+         "Human pop. density" = POPDEN2020,
+         "Prox. to heavy traffic roadways*" = prox_heavy_traffic,
+         "PM2.5 concentration*" = pm2.5_count,
+         "Diesel/NOx emissions (tons/km2)*" = diesel_tons_km2,
+         "Toxic releases*" = avg_rsei,
+         "Average ozone concentration*" = avg_ozone,
+         "Prox. to hazardous waste facilities**" = avg_ptsdf,
+         "Units with lead**" = units_lead,
+         "Prox. to Superfund sites**" = avg_pnpl,
+         "Prox. to risk mgmt plan facilities**" = avg_prmp
+    #     "Wastewater discharge" = avg_pwdis
+  ) 
+  
+
+print(colnames(cordat))
+
+corr <- cor(cordat, method = "spearman", use="pairwise.complete.obs")
+
+corrplot(corr, 
+         method = 'color', 
+         type = 'lower', 
+         order = 'original', 
+         tl.col = 'black',
+         cl.ratio = 0.2, 
+         tl.srt = 45, 
+         col = viridis(200),  # Use viridis for colorblind-friendly palette
+         cl.pos = 'b', 
+         addgrid.col = 'white', 
+         addCoef.col = 'black')  # Coefficient text color
+
+##### Variables grouped 
+
+cordat <- all_dat %>% distinct(site, .keep_all = TRUE) %>% 
+  mutate(city = as.character(city)) %>% 
+  mutate(city = dplyr::recode(city, sewa = "Seattle",tawa = "Tacoma")) %>%
+  dplyr::select(c(natural,
+                  med_income,
+                  Impervious, 
+                  POPDEN2020,
+                  EXPOSURE,
+                  RISK,
+                  BURDEN_PERCENTILE)) %>%
+  rename("Natural land cover" = natural,
+  "Median income" = med_income,
+  "Impervious surface" = Impervious,
+  "Human pop. density" = POPDEN2020,
+  "Environmental exposures" = EXPOSURE,
+  "Environmental risks" =  RISK,
+  "Pollution burden" = BURDEN_PERCENTILE)
+
+corr <- cor(cordat, method = "spearman", use="pairwise.complete.obs")
+
+corrplot(corr, 
+         method = 'color', 
+         type = 'lower', 
+         order = 'original', 
+         tl.col = 'black',
+         cl.ratio = 0.2, 
+         tl.srt = 45, 
+         col = viridis(200),  # Use viridis for colorblind-friendly palette
+         cl.pos = 'b', 
+         addgrid.col = 'white', 
+         addCoef.col = 'black')  # Coefficient text color
+
+#### look at correlations -- by city
+
+##  seattle -- all
+
+cordat <- all_dat_sewa %>% distinct(site, .keep_all = TRUE) %>% 
+  dplyr::select(c(
+    natural,
+     # urban,
+     Impervious,
+     # prop_ndvi_avg,
+     POPDEN2020,
+     med_income,
+     prox_heavy_traffic,
+     pm2.5_count,
+     diesel_tons_km2,
+     avg_rsei,
+     avg_ozone,
+     avg_ptsdf,
+     units_lead,
+     avg_pnpl,
+     avg_prmp
+    #     "Wastewater discharge" = avg_pwdis
+  )) %>%
+  rename("Natural land cover" = natural ,
+     #    "Urban land cover (NLCD)" = urban,
+         "Median income" = med_income,
+         "Impervious surface" = Impervious,
+     #    "Average NDVI" = prop_ndvi_avg,
+         "Human pop. density" = POPDEN2020,
+         "Prox. to heavy traffic roadways*" = prox_heavy_traffic,
+         "PM2.5 concentration*" = pm2.5_count,
+         "Diesel/NOx emissions (tons/km2)*" = diesel_tons_km2,
+         "Toxic releases*" = avg_rsei,
+         "Average ozone concentration*" = avg_ozone,
+         "Prox. to hazardous waste facilities**" = avg_ptsdf,
+         "Units with lead**" = units_lead,
+         "Prox. to Superfund sites**" = avg_pnpl,
+         "Prox. to risk mgmt plan facilities**" = avg_prmp
+    #     "Wastewater discharge" = avg_pwdis
+  ) 
+
+corr <- cor(cordat, method = "spearman", use="pairwise.complete.obs")
+corrplot(corr, method = "number")
+
+corrplot(corr, 
+         method = 'color', 
+         type = 'lower', 
+         order = 'original', 
+         tl.col = 'black',
+         cl.ratio = 0.2, 
+         tl.srt = 45, 
+         col = viridis(200),  # Use viridis for colorblind-friendly palette
+         cl.pos = 'b', 
+         addgrid.col = 'white', 
+         addCoef.col = 'black')
+
+## seattle -- grouped 
+cordat <- all_dat_sewa %>% distinct(site, .keep_all = TRUE) %>% 
+  dplyr::select(c(natural,
+                  med_income,
+    #              Impervious, 
+                  POPDEN2020,
+                  SEWA_EXPOSURE,
+                  SEWA_RISK,
+                  SEWA_BURDEN_PERCENTILE)) %>%
+  rename("Natural land cover" = natural,
+  "Median income" = med_income,
+#  "Impervious surface" = Impervious,
+  "Human pop. density" = POPDEN2020,
+#  "Environmental exposures" = EXPOSURE,
+ # "Environmental risks" =  RISK,
+  "Pollution burden" = SEWA_BURDEN_PERCENTILE)
+
+corr <- cor(cordat, method = "spearman", use="pairwise.complete.obs")
+
+corrplot(corr, 
+         method = 'color', 
+         type = 'lower', 
+         order = 'original', 
+         tl.col = 'black',
+         cl.ratio = 0.2, 
+         tl.srt = 45, 
+         col = viridis(200),  # Use viridis for colorblind-friendly palette
+         cl.pos = 'b', 
+         addgrid.col = 'white', 
+         addCoef.col = 'black')  # Coefficient text color
+
+## tacoma -- all 
+cordat <- all_dat_tawa %>% distinct(site, .keep_all = TRUE) %>% 
+  dplyr::select(c(
+    natural,
+     # urban,
+    # Impervious,
+     # prop_ndvi_avg,
+     POPDEN2020,
+     med_income,
+     prox_heavy_traffic,
+     pm2.5_count,
+     diesel_tons_km2,
+     avg_rsei,
+     avg_ozone,
+     avg_ptsdf,
+     units_lead,
+     avg_pnpl,
+     avg_prmp
+    #     "Wastewater discharge" = avg_pwdis
+  )) %>%
+  rename("Natural land cover" = natural ,
+     #    "Urban land cover (NLCD)" = urban,
+         "Median income" = med_income,
+       #  "Impervious surface" = Impervious,
+     #    "Average NDVI" = prop_ndvi_avg,
+         "Human pop. density" = POPDEN2020,
+         "Prox. to heavy traffic roadways*" = prox_heavy_traffic,
+         "PM2.5 concentration*" = pm2.5_count,
+         "Diesel/NOx emissions (tons/km2)*" = diesel_tons_km2,
+         "Toxic releases*" = avg_rsei,
+         "Average ozone concentration*" = avg_ozone,
+         "Prox. to hazardous waste facilities**" = avg_ptsdf,
+         "Units with lead**" = units_lead,
+         "Prox. to Superfund sites**" = avg_pnpl,
+         "Prox. to risk mgmt plan facilities**" = avg_prmp
+    #     "Wastewater discharge" = avg_pwdis
+  ) 
+
+corr <- cor(cordat, method = "spearman", use="pairwise.complete.obs")
+
+corrplot(corr, 
+         method = 'color', 
+         type = 'lower', 
+         order = 'original', 
+         tl.col = 'black',
+         cl.ratio = 0.2, 
+         tl.srt = 45, 
+         col = viridis(200),  # Use viridis for colorblind-friendly palette
+         cl.pos = 'b', 
+         addgrid.col = 'white', 
+         addCoef.col = 'black')
+
+
+
+## tacoma -- grouped 
+cordat <- all_dat_tawa %>% distinct(site, .keep_all = TRUE) %>% 
+  dplyr::select(c(natural,
+                  med_income,
+    #              Impervious, 
+                  POPDEN2020,
+                  TAWA_EXPOSURE,
+                  TAWA_RISK,
+                  TAWA_BURDEN_PERCENTILE)) %>%
+  rename("Natural land cover" = natural,
+  "Median income" = med_income,
+#  "Impervious surface" = Impervious,
+  "Human pop. density" = POPDEN2020,
+#  "Environmental exposures" = EXPOSURE,
+ # "Environmental risks" =  RISK,
+  "Pollution burden" = TAWA_BURDEN_PERCENTILE)
+
+corr <- cor(cordat, method = "spearman", use="pairwise.complete.obs")
+
+corrplot(corr, 
+         method = 'color', 
+         type = 'lower', 
+         order = 'original', 
+         tl.col = 'black',
+         cl.ratio = 0.2, 
+         tl.srt = 45, 
+         col = viridis(200),  # Use viridis for colorblind-friendly palette
+         cl.pos = 'b', 
+         addgrid.col = 'white', 
+         addCoef.col = 'black')  # Coefficient text color
+
+```
 
 ## Black bear models 
 ```{r}
 
 # Grouped exposures/effects model
-bearmod <- glmmTMB(Black_bear ~ city + scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+bearmod <- glmmTMB(black_bear ~ city + 
+                     scale(natural) + 
+                   #  scale(EXPOSURE) + 
+                     scale(RISK)  + 
+                     scale(med_income) + season + 
+                     scale(POPDEN2020) + ( 1 | site), 
                    data = all_dat, 
-                   offset = log(days.active),
+                   offset = log(days_active),
                    family = "nbinom2",
                    na.action = "na.fail")
 summary(bearmod)
 
 bearmodsewa <- glmmTMB(Black_bear ~ scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(EXPOSURE) + scale(RISK)  + 
                      scale(med_income) + season + 
                      # scale(pop_density) 
                      + ( 1 | site), 
@@ -32,7 +423,7 @@ bearmodsewa <- glmmTMB(Black_bear ~ scale(develop) +
                 family = "nbinom2")
 
 bearmodtawa <- glmmTMB(Black_bear ~ scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(EXPOSURE) + scale(RISK)  + 
                      scale(med_income) + season + scale(pop_density) + ( 1 | site), 
                 data = all_dat_tawa, 
                 offset = log(days.active),
@@ -47,29 +438,34 @@ bearmodtawa <- glmmTMB(Black_bear ~ scale(develop) +
 ```{r}
 
 # Grouped exposures/effects model
-bobcatmod <- glmmTMB(Bobcat ~ city + scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+bobcatmod <- glmmTMB(bobcat ~ city + 
+                       scale(natural) + 
+           #          scale(EXPOSURE) + 
+                       scale(RISK)  + 
+                     scale(med_income) + season + 
+             scale(POPDEN2020) + ( 1 | site), 
                    data = all_dat, 
-                   offset = log(days.active),
+                   offset = log(days_active),
                    family = "nbinom2",
                    na.action = "na.fail")
 summary(bobcatmod)
 
-bobcatmodsewa <- glmmTMB(Bobcat ~ scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
+bobcatmodsewa <- glmmTMB(bobcat ~ scale(natural) + 
+     #                scale(SEWA_EXPOSURE) + 
+        #               scale(SEWA_RISK)  + 
                      scale(med_income) + season + 
-                       # scale(pop_density) 
+                       scale(POPDEN2020) 
                        + ( 1 | site), 
                 data = all_dat_sewa, 
-                offset = log(days.active),
+                offset = log(days_active),
                 family = "nbinom2")
 
-bobcatmodtawa <- glmmTMB(Bobcat ~ scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+bobcatmodtawa <- glmmTMB(bobcat ~ scale(natural) + 
+                     scale(TAWA_EXPOSURE) + scale(TAWA_RISK)  + 
+                     scale(med_income) + season + 
+                       scale(POPDEN2020) + ( 1 | site), 
                 data = all_dat_tawa, 
-                offset = log(days.active),
+                offset = log(days_active),
                 family = "nbinom2")
 
 # model diagnostics 
@@ -94,37 +490,43 @@ plotResiduals(simOut, all_dat$Environment1, quantreg = T)
 # Model converges for global model but not city specific models 
 ```
 
+
 ## Coyote models
 ```{r}
 # Coyote model -- negative binomial, grouped exposures and effects
-coymod <- glmmTMB(Coyote ~ city +
-                    scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+colnames(all_dat)
+coymod <- glmmTMB(coyote ~ city +
+                    scale(natural) + 
+                    # scale(EXPOSURE) + 
+                    scale(RISK)  + 
+                     scale(med_income) + season + scale(POPDEN2020) + ( 1 | site), 
                 data = all_dat, 
-                offset = log(days.active),
+                offset = log(days_active),
                 family = "nbinom2",
                 na.action = "na.fail")
 
 summary(coymod)
 
-coymodsewa <- glmmTMB(Coyote ~ 
-                        scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + 
-                      #  scale(pop_density) 
+coymodsewa <- glmmTMB(coyote ~ 
+                        scale(natural) + 
+                #     scale(EXPOSURE) + 
+                       scale(SEWA_RISK)  + 
+                     scale(med_income) + 
+                  season + scale(POPDEN2020) + 
                        + ( 1 | site), 
                 data = all_dat_sewa, 
-                offset = log(days.active),
+                offset = log(days_active),
                 family = "nbinom2",na.action = "na.fail")
 
 summary(coymodsewa)
 
-coymodtawa <- glmmTMB(Coyote ~ scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+coymodtawa <- glmmTMB(coyote ~ 
+                        scale(natural) + 
+                   #  scale(EXPOSURE) + 
+                       scale(TAWA_RISK)  + 
+                     scale(med_income) + season + scale(POPDEN2020) + ( 1 | site), 
                 data = all_dat_tawa, 
-                offset = log(days.active),
+                offset = log(days_active),
                 family = "nbinom2",
                 na.action = "na.fail")
 
@@ -136,31 +538,37 @@ summary(coymodtawa)
 ```{r}
 
 # Grouped exposures/effects model
-racmod <- glmmTMB(Raccoon ~ city + scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+racmod <- glmmTMB(raccoon ~ city + 
+                    scale(natural) + 
+                   #  scale(EXPOSURE) + 
+                    scale(RISK)  + 
+                     scale(med_income) + season + scale(POPDEN2020) + ( 1 | site), 
                    data = all_dat, 
-                   offset = log(days.active),
+                   offset = log(days_active),
                    family = "nbinom2",
                    na.action = "na.fail")
 summary(racmod)
 
-racmodsewa <- glmmTMB(Raccoon ~ scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
+racmodsewa <- glmmTMB(raccoon ~ scale(natural) + 
+                    # scale(SEWA_EXPOSURE) + 
+                       scale(SEWA_RISK)  + 
                      scale(med_income) + season +
-                       # scale(pop_density)
+                        scale(POPDEN2020)
                        + ( 1 | site), 
                 data = all_dat_sewa, 
-                offset = log(days.active),
+                offset = log(days_active),
                 family = "nbinom2",
                 na.action = "na.fail")
+
 summary(racmodsewa)
 
-racmodtawa <- glmmTMB(Raccoon ~ scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+racmodtawa <- glmmTMB(raccoon ~ scale(natural) + 
+                  #   scale(TAWA_EXPOSURE) + 
+                       scale(TAWA_RISK)  + 
+                     scale(med_income) + season + 
+                       scale(POPDEN2020) + ( 1 | site), 
                 data = all_dat_tawa, 
-                offset = log(days.active),
+                offset = log(days_active),
                 family = "nbinom2",
                 na.action = "na.fail")
 summary(racmodtawa)
@@ -173,7 +581,7 @@ summary(racmodtawa)
 
 # Grouped exposures/effects model
 ottermod <- glmmTMB(River_otter ~ city + scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(EXPOSURE) + scale(RISK)  + 
                      scale(med_income) + season + scale(pop_density) + ( 1 | site), 
                    data = all_dat, 
                    offset = log(days.active),
@@ -182,7 +590,7 @@ ottermod <- glmmTMB(River_otter ~ city + scale(develop) +
 summary(ottermod)
 
 ottermodsewa <- glmmTMB(River_otter ~ scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(EXPOSURE) + scale(RISK)  + 
                      scale(med_income) + season + 
                        # scale(pop_density) 
                        + ( 1 | site), 
@@ -191,7 +599,7 @@ ottermodsewa <- glmmTMB(River_otter ~ scale(develop) +
                 family = "nbinom2")
 
 ottermodtawa <- glmmTMB(River_otter ~ scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
+                     scale(EXPOSURE) + scale(RISK)  + 
                      scale(med_income) + season + scale(pop_density) + ( 1 | site), 
                 data = all_dat_tawa, 
                 offset = log(days.active),
@@ -205,31 +613,39 @@ ottermodtawa <- glmmTMB(River_otter ~ scale(develop) +
 ```{r}
 
 # Grouped exposures/effects model
-skunkmod <- glmmTMB(Striped_skunk ~ city + scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+skunkmod <- glmmTMB(striped_skunk ~ city + 
+                      scale(natural) + 
+                   #  scale(EXPOSURE) + 
+                      scale(RISK)  + 
+                     scale(med_income) + season + 
+                     scale(POPDEN2020) + ( 1 | site), 
                    data = all_dat, 
-                   offset = log(days.active),
+                   offset = log(days_active),
                    family = "nbinom2",
                    na.action = "na.fail")
 summary(skunkmod)
 
-skunkmodsewa <- glmmTMB(Striped_skunk ~ scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
+skunkmodsewa <- glmmTMB(striped_skunk ~ scale(natural) + 
+                 #    scale(SEWA_EXPOSURE) + 
+                       scale(SEWA_RISK)  + 
                      scale(med_income) + season +
-                       # scale(pop_density)
+                        scale(POPDEN2020)
                        + ( 1 | site), 
                 data = all_dat_sewa, 
-                offset = log(days.active),
+                offset = log(days_active),
                 family = "nbinom2",
                 na.action = "na.fail")
+
 summary(skunkmodsewa)
 
-skunkmodtawa <- glmmTMB(Striped_skunk ~ scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+skunkmodtawa <- glmmTMB(striped_skunk ~ 
+                          scale(natural) + 
+               #      scale(TAWA_EXPOSURE) + 
+                       scale(TAWA_RISK)  + 
+                     scale(med_income) + season + 
+                       scale(POPDEN2020) + ( 1 | site), 
                 data = all_dat_tawa, 
-                offset = log(days.active),
+                offset = log(days_active),
                 family = "nbinom2",
                 na.action = "na.fail")
 
@@ -257,31 +673,39 @@ plotResiduals(simOut, all_dat$Environment1, quantreg = T)
 
 ## Virginia opossum models
 ```{r}
-oppmod <- glmmTMB(Virginia_opossum ~ city + scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+oppmod <- glmmTMB(virginia_opossum ~ city + 
+                    scale(natural) + 
+                    # scale(EXPOSURE) + 
+                    scale(RISK)  + 
+                     scale(med_income) + season + 
+                    scale(POPDEN2020) + ( 1 | site), 
                    data = all_dat, 
-                   offset = log(days.active),
+                   offset = log(days_active),
                    family = "nbinom2",
                    na.action = "na.fail")
 summary(oppmod)
 
-oppmodsewa <- glmmTMB(Virginia_opossum ~ scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
+oppmodsewa <- glmmTMB(virginia_opossum ~ 
+                     scale(natural) + 
+             #        scale(SEWA_EXPOSURE) + 
+                       scale(SEWA_RISK)  + 
                      scale(med_income) + season +
-                       # scale(pop_density)
+                        scale(POPDEN2020)
                        + ( 1 | site), 
                 data = all_dat_sewa, 
-                offset = log(days.active),
+                offset = log(days_active),
                 family = "nbinom2",
                 na.action = "na.fail")
 summary(oppmodsewa)
 
-oppmodtawa <- glmmTMB(Virginia_opossum ~ scale(develop) + 
-                     scale(EXPOSURE) + scale(EFFECT)  + 
-                     scale(med_income) + season + scale(pop_density) + ( 1 | site), 
+oppmodtawa <- glmmTMB(virginia_opossum ~ 
+                        scale(natural) + 
+                  #   scale(TAWA_EXPOSURE) + 
+                       scale(TAWA_RISK)  + 
+                     scale(med_income) + season + 
+                       scale(POPDEN2020) + ( 1 | site), 
                 data = all_dat_tawa, 
-                offset = log(days.active),
+                offset = log(days_active),
                 family = "nbinom2",
                 na.action = "na.fail")
 summary(oppmodtawa)
@@ -294,64 +718,77 @@ Simpson's diversity model
 ```{r}
 
 # Grouped model 
-simpmod <- glmmTMB(simpson.di ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
+shanmod <- glmmTMB(shannon.di ~ city + 
+                     scale(natural) + 
+                     #scale(EXPOSURE) + 
+                     scale(RISK)  + 
                      scale(med_income) +
-                      scale(pop_density) + ( 1 | site), 
+                      scale(POPDEN2020) + ( 1 | site), 
                    data = all_dat_veg, 
                    family = "gaussian",
                    na.action = "na.fail") 
-summary(simpmod)
+summary(shanmod)
 
-simpmodsewa <- glmmTMB(simpson.di ~ scale(develop) + scale(EXPOSURE) + 
-                         scale(EFFECT) + scale(pop_density) + 
+shanmodsewa <- glmmTMB(shannon.di ~ 
+                         scale(natural) + 
+                      #   scale(EXPOSURE) + 
+                         scale(SEWA_RISK) + 
+                        scale(POPDEN2020) + 
                          scale(med_income) + ( 1 | site), 
-                    data = all_dat_sewa_veg, 
+                    data = all_dat_veg_sewa, 
                     family = "gaussian")
 
-summary(simpmodsewa)
+summary(shanmodsewa)
 
-simpmodtawa <- glmmTMB(simpson.di ~ scale(develop) + scale(EXPOSURE) + 
-                         scale(EFFECT) + scale(pop_density) + 
+shanmodtawa <- glmmTMB(shannon.di ~ 
+                         scale(natural) + 
+                         #scale(EXPOSURE) + 
+                         scale(TAWA_RISK) + 
+                         scale(POPDEN2020) + 
                          scale(med_income) + ( 1 | site),
-                    data = all_dat_tawa_veg, 
+                    data = all_dat_veg_tawa, 
                     family = "gaussian")
-summary(simpmodtawa)
+summary(shanmodtawa)
 
 ```
-
 
 
 Species richness model 
 ```{r}
 colnames(all_dat_veg)
 # Grouped model 
-richmod <- glmmTMB(richness ~ city + scale(develop) + scale(EXPOSURE) + scale(EFFECT)  + 
+richmod <- glmmTMB(richness ~ city + 
+                     scale(natural) + 
+                     #scale(EXPOSURE) + 
+                     scale(RISK)  + 
                      scale(med_income) +
-                      scale(pop_density) + ( 1 | site), 
+                      scale(POPDEN2020) + 
+                     ( 1 | site), 
                    data = all_dat_veg, 
                    family = "poisson",
                    na.action = "na.fail") 
 summary(richmod)
 
-richmodsewa <- glmmTMB(richness ~ scale(develop) + scale(EXPOSURE) + 
-                         scale(EFFECT) + scale(pop_density) + 
+richmodsewa <- glmmTMB(richness ~ 
+                         scale(natural) + 
+                         #scale(EXPOSURE) + 
+                         scale(SEWA_RISK) + scale(POPDEN2020) + 
                          scale(med_income) + ( 1 | site), 
-                    data = all_dat_sewa_veg, 
+                    data = all_dat_veg_sewa, 
                     family = "poisson")
 summary(richmodsewa)
 
-richmodtawa <- glmmTMB(richness ~ scale(develop) + scale(EXPOSURE) + 
-                         scale(EFFECT) + scale(pop_density) + 
+richmodtawa <- glmmTMB(richness ~ 
+                         scale(natural) + 
+                         #scale(EXPOSURE) + 
+                         scale(TAWA_RISK) + 
+                         scale(POPDEN2020) + 
                          scale(med_income) + ( 1 | site),
-                    data = all_dat_tawa_veg, 
+                    data = all_dat_veg_sewa, 
                     family = "poisson")
-summary(simpmodtawa)
-
-
-# Nothing matters 
+summary(richmodtawa)
 
 ```
-
 
 
 ## Figures! 
@@ -389,7 +826,16 @@ tab_model(coymodtawa, racmodtawa, oppmodtawa, skunkmodtawa,
 
 
 # diversity models 
-tab_model(simpmod, simpmodsewa, simpmodtawa,
+tab_model(shanmod, shanmodsewa, shanmodtawa,
+          collapse.ci = TRUE, 
+          p.style     = "numeric_stars",
+          rm.terms = c("season [Fall20,
+                            Spring19, Spring20, Summer19, Summer20,
+                            Winter19,Winter20]")
+          ) 
+
+# richness models 
+tab_model(richmod, richmodsewa, richmodtawa,
           collapse.ci = TRUE, 
           p.style     = "numeric_stars",
           rm.terms = c("season [Fall20,
@@ -404,7 +850,10 @@ First, both-cities model
 ```{r}
 
 # Forest plot of species model estimates --grouped models
-plot_models(coymod, racmod, oppmod, title = "Both cities", show.values = T, grid = TRUE, vline.color = "gray",
+(plot_global <- plot_models(coymod, racmod, oppmod,
+            show.values = T,
+            show.legend = F,
+            grid = TRUE, vline.color = "gray",
              grid.breaks = c(.1,1,10),
           p.shape     = "FALSE",
          rm.terms = c("season [
@@ -412,12 +861,18 @@ plot_models(coymod, racmod, oppmod, title = "Both cities", show.values = T, grid
                              Fall19,Winter20]",
                              "city [tawa]") , 
      #       transform = NULL
-               axis.lim = c(0.1,100) 
+               axis.lim = c(0.1,10) 
      )+ 
 #    scale_y_log10(limits = c(-0.1, 100)) + 
   scale_color_sjplot("eight") + 
-  scale_x_discrete(labels=c("Developed land cover", "Env. exposures", "Env. effects", "Median income", "Human pop. density"), limits = rev) 
+  scale_x_discrete(labels=c("Natural land cover", "Environmental risks", "Median income", "Human pop. density"), limits = rev) + 
+font_size(axis_title.x = 0, axis_title.y = 12, labels.x = 0, labels.y = 12))
 
+
+# vline
+#state1plot$layers[[1]]$aes_params$size <- 4
+# labels
+#plot_global$layers[[4]]$aes_params$size <- 3
 
 ```
 
@@ -426,9 +881,16 @@ Seattle model
 ```{r}
 
 # Forest plot of species model estimates -- Seattle 
-plot_models(coymodsewa, racmodsewa, oppmodsewa, title = "Seattle", show.values = T, grid = TRUE, vline.color = "gray",
-             grid.breaks = c(0.1,1,10),
-          p.shape     = "FALSE",
+plot_sewa <- plot_models(coymodsewa, racmodsewa, oppmodsewa,
+                         show.values = T, 
+                         show.legend = F,
+                         grid = TRUE, 
+                         axis.labels = NULL,
+                         axis.title = NULL,
+                         vline.color = "gray", 
+                         grid.breaks = c(0.1,1,10),
+                         auto.label = FALSE,
+                         p.shape = "FALSE",
          rm.terms = c("season [
                             Winter19,Spring19, Summer19, 
                              Fall19,Winter20]") , 
@@ -437,9 +899,10 @@ plot_models(coymodsewa, racmodsewa, oppmodsewa, title = "Seattle", show.values =
      )+ 
 #    scale_y_log10(limits = c(-0.1, 100)) + 
   scale_color_sjplot("eight") + 
-  scale_x_discrete(labels=c("Developed land cover", "Env. exposures", "Env. effects", "Median income"), limits = rev) 
+  scale_x_discrete(labels=c("Natural land cover", "Environmental risks", "Median income", "Human pop. density"), limits = rev)+ 
+font_size(axis_title.x = 0, axis_title.y = 12, labels.x = 0, labels.y = 12)
 
-summary(coymodsewa)
+
 ```
 
 
@@ -447,8 +910,15 @@ Tacoma model
 ```{r}
 
 # Forest plot of species model estimates -- Tacoma
-plot_models(coymodtawa, racmodtawa, oppmodtawa, title = "Tacoma", show.values = T, grid = TRUE, vline.color = "gray",
-             grid.breaks = c(0.1,1,10),
+plot_tawa <- plot_models(coymodtawa, racmodtawa, oppmodtawa, 
+                         show.values = T, 
+                         show.legend = F,
+                         grid = TRUE, 
+                         axis.labels = NULL,
+                         axis.title = NULL,
+                         vline.color = "gray", 
+                         grid.breaks = c(0.1,1,10),
+                         auto.label = FALSE,
           p.shape     = "FALSE",
          rm.terms = c("season [
                             Winter19,Spring19, Summer19, 
@@ -458,10 +928,17 @@ plot_models(coymodtawa, racmodtawa, oppmodtawa, title = "Tacoma", show.values = 
      )+ 
 #    scale_y_log10(limits = c(-0.1, 100)) + 
   scale_color_sjplot("eight") + 
-  scale_x_discrete(labels=c("Developed land cover", "Env. exposures", "Env. effects", "Median income", "Human pop. density"), limits = rev) 
+  scale_x_discrete(labels=c("Natural land cover", "Environmental risks", "Median income", "Human pop. density"), limits = rev)+ 
+font_size(axis_title.x = 12, axis_title.y = 12, labels.x = 10, labels.y = 12)
 
 ```
 
+## Plot all meso models together 
+```{r}
+cowplot::plot_grid(plot_global,plot_sewa, plot_tawa,
+                   labels = c('A', 'B', 'C'), nrow = 3,
+          align = "h")
+```
 
 Diversity models
 ```{r}
@@ -474,7 +951,7 @@ plot_models(simpmod, simpmodsewa, simpmodtawa, title = "Tacoma", show.values = T
      )+ 
 #    scale_y_log10(limits = c(-0.1, 100)) + 
   scale_color_sjplot("eight") + 
-  scale_x_discrete(labels=c("Developed land cover", "Env. exposures", "Env. effects", "Median income", "Human pop. density"), limits = rev) 
+  scale_x_discrete(labels=c(("Developed land cover", "Environmental exposures", "Environmental risks", "Median income", "Human pop. density"), limits = rev) 
 
 
 theme_set(theme_sjplot())
@@ -514,4 +991,3 @@ plot_grid(income_both, income_sewa, income_tawa,
           exp_both, exp_sewa, exp_tawa, labels = c('A', 'B', "C", "D", "E", "F"), nrow = 2,
           align = "h")
 ```
-

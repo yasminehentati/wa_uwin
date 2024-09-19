@@ -1,75 +1,75 @@
-city,site,season,species,count,days.active,med_income,estimate
-tawa,B-TP,Summer19,Coyote,1,35,83733.1953125,83733.1953125
-sewa,BGP1,Fall19,Virginia opossum,1,32,145577.15625,83733.1953125
-sewa,BRF1,Spring19,Raccoon,3,38,59065.58203125,83733.1953125
-sewa,DOS1,Fall19,Virginia opossum,1,36,126155.4453125,83733.1953125
-sewa,DRP2,Fall19,Raccoon,55,31,118235.390625,83733.1953125
-sewa,DSP1,Fall19,Virginia opossum,14,31,122888.9921875,83733.1953125
-sewa,DWP1,Fall19,Raccoon,5,36,58974.828125,83733.1953125
-sewa,FGL1,Fall19,Raccoon,1,28,56383.08984375,83733.1953125
-sewa,FRD1,Fall19,Coyote,1,35,135492.046875,83733.1953125
-tawa,G-CBP1,Winter19,Coyote,6,35,50224.0078125,83733.1953125
-tawa,G-CLP3,Spring19,Douglas squirrel,3,38,56407.65625,83733.1953125
-tawa,G-FP1,Spring19,Eastern gray squirrel,105,37,63875.41015625,83733.1953125
-tawa,G-IP,Spring20,Eastern gray squirrel,15,40,56664.4765625,83733.1953125
-tawa,G-JP,Spring19,Eastern gray squirrel,20,10,83815.2109375,83733.1953125
-tawa,G-KP1,Spring19,Coyote,2,36,75941.5390625,83733.1953125
-tawa,G-OTP,Spring19,Coyote,1,33,53518.64453125,83733.1953125
-tawa,G-SB,Spring19,Douglas squirrel,15,37,84449.609375,83733.1953125
-tawa,G-SERA,Spring20,Coyote,4,50,54134.09375,83733.1953125
-tawa,G-SP,Winter19,Eastern gray squirrel,48,15,50860.625,83733.1953125
-tawa,G-TNC1,Winter19,Eastern gray squirrel,1,29,51703.21875,83733.1953125
-tawa,G-VP,Spring19,Coyote,1,37,69052.4375,83733.1953125
-tawa,G-WLP1,Winter19,Coyote,1,28,45439.90234375,83733.1953125
-tawa,G-WP2,Spring19,Coyote,2,37,60150.65234375,83733.1953125
-sewa,HCN1,Fall19,River otter,1,36,61698.07421875,83733.1953125
-sewa,HFW1,Fall19,Coyote,2,33,97799.8984375,83733.1953125
-sewa,IRP1,Fall19,Coyote,8,31,131548.046875,83733.1953125
-sewa,JBP1,Fall19,Coyote,2,46,134804.484375,83733.1953125
-sewa,LTP1,Spring19,Raccoon,7,34,109735.8125,83733.1953125
-sewa,LWP2,Summer19,Eastern gray squirrel,7,23,119529.4375,83733.1953125
-sewa,MBC1,Fall19,Black-tailed deer,6,31,201386.109375,83733.1953125
-sewa,MGP1,Fall19,Raccoon,1,31,87185.8203125,83733.1953125
-sewa,MPO1,Fall19,Virginia opossum,3,35,104551.6796875,83733.1953125
-sewa,MSR1,Fall19,Raccoon,1,36,78423.828125,83733.1953125
-sewa,MWP1,Spring19,Virginia opossum,2,32,84471.46875,83733.1953125
-sewa,NRP1,Fall19,Coyote,1,31,125898.234375,83733.1953125
-tawa,P-BLP,Spring19,Coyote,1,35,60285.33984375,83733.1953125
-tawa,P-CCP,Spring19,Coyote,2,15,71848.015625,83733.1953125
-tawa,P-CUP,Spring19,Coyote,16,38,107747.1796875,83733.1953125
-tawa,P-DPV,Spring19,Eastern gray squirrel,27,37,84868.0078125,83733.1953125
-tawa,P-GP,Spring19,Coyote,4,38,74638.78125,83733.1953125
-tawa,P-GW1,Winter19,Coyote,3,29,92236.40625,83733.1953125
-tawa,P-JCP,Winter19,Eastern gray squirrel,19,15,83236.4296875,83733.1953125
-tawa,P-LCC,Spring19,Coyote,1,10,71365.0546875,83733.1953125
-tawa,P-MCP,Spring19,Eastern gray squirrel,20,38,45579.38671875,83733.1953125
-tawa,P-MKP2,Spring19,Eastern gray squirrel,18,33,65988.3828125,83733.1953125
-tawa,P-OB,Spring19,Eastern gray squirrel,16,37,84867.9921875,83733.1953125
-tawa,P-OLT,Spring19,Coyote,6,36,64019,83733.1953125
-tawa,P-OV1,Winter19,Bobcat,2,28,68914.484375,83733.1953125
-tawa,P-PCNA2,Spring19,Coyote,1,38,110701.6875,83733.1953125
-tawa,P-PDP,Spring19,Coyote,1,37,84868,83733.1953125
-tawa,P-RP,Spring19,Coyote,7,38,83003.484375,83733.1953125
-tawa,P-RT,Spring19,Eastern gray squirrel,7,35,65154.8984375,83733.1953125
-tawa,P-RWSR,Spring19,Coyote,35,36,66338.4765625,83733.1953125
-tawa,P-SCP2,Spring19,Eastern gray squirrel,8,24,55137.2109375,83733.1953125
-tawa,P-STP,Spring19,Coyote,1,38,101337.6796875,83733.1953125
-tawa,P-TE1,Spring19,Douglas squirrel,3,23,68533.96875,83733.1953125
-tawa,P-UCC,Spring19,Coyote,1,30,85166.609375,83733.1953125
-tawa,P-UWT,Spring20,Eastern gray squirrel,8,49,62460.62109375,83733.1953125
-tawa,P-WBC,Spring19,Eastern gray squirrel,59,35,64678.75390625,83733.1953125
-tawa,P-WP,Spring19,Eastern gray squirrel,43,16,54801.03515625,83733.1953125
-tawa,P-WWP,Spring19,Coyote,4,35,68550.734375,83733.1953125
-sewa,PGP1,Spring19,Eastern gray squirrel,1,29,90742.4375,83733.1953125
-sewa,PHN1,Fall19,Raccoon,3,31,111462.4375,83733.1953125
-sewa,RHF1,Fall19,Virginia opossum,2,36,137418.390625,83733.1953125
-sewa,RVP1,Fall19,Coyote,2,31,89371.9453125,83733.1953125
-sewa,RWP1,Fall19,Virginia opossum,4,31,110551.0625,83733.1953125
-sewa,SVP1,Fall19,Coyote,4,31,156339.546875,83733.1953125
-sewa,SWD1,Fall19,Coyote,4,32,204164.5625,83733.1953125
-sewa,TCC1,Fall19,Coyote,1,36,83163.5078125,83733.1953125
-sewa,TMF1,Fall19,Bobcat,1,35,116052,83733.1953125
-sewa,TMP1,Fall19,Raccoon,10,41,90758.046875,83733.1953125
-sewa,TRN1,Fall19,Virginia opossum,2,35,94875,83733.1953125
-sewa,WCP2,Spring20,Raccoon,1,30,54790.89453125,83733.1953125
-sewa,WDG1,Fall19,Eastern gray squirrel,2,36,81032.1328125,83733.1953125
+city,site,season,species,count,days.active,med_income
+tawa,B-TP,Summer19,Coyote,1,35,83733.1953125
+sewa,BGP1,Fall19,Virginia opossum,1,32,145577.15625
+sewa,BRF1,Spring19,Raccoon,3,38,59065.57421875
+sewa,DOS1,Fall19,Virginia opossum,1,36,126155.4609375
+sewa,DRP2,Fall19,Raccoon,55,31,118235.390625
+sewa,DSP1,Fall19,Virginia opossum,14,31,122888.9921875
+sewa,DWP1,Fall19,Raccoon,5,36,58974.82421875
+sewa,FGL1,Fall19,Raccoon,1,28,56383.08984375
+sewa,FRD1,Fall19,Coyote,1,35,135492.0625
+tawa,G-CBP1,Winter19,Coyote,6,35,50224.0078125
+tawa,G-CLP3,Spring19,Douglas squirrel,3,38,56407.65625
+tawa,G-FP1,Spring19,Eastern gray squirrel,105,37,63875.41015625
+tawa,G-IP,Spring20,Eastern gray squirrel,15,40,56664.47265625
+tawa,G-JP,Spring19,Eastern gray squirrel,20,10,83815.203125
+tawa,G-KP1,Spring19,Coyote,2,36,75941.5390625
+tawa,G-OTP,Spring19,Coyote,1,33,53518.640625
+tawa,G-SB,Spring19,Douglas squirrel,15,37,84449.6171875
+tawa,G-SERA,Spring20,Coyote,4,50,54134.1015625
+tawa,G-SP,Winter19,Eastern gray squirrel,48,15,50860.62890625
+tawa,G-TNC1,Winter19,Eastern gray squirrel,1,29,51703.21484375
+tawa,G-VP,Spring19,Coyote,1,37,69052.4375
+tawa,G-WLP1,Winter19,Coyote,1,28,45439.90234375
+tawa,G-WP2,Spring19,Coyote,2,37,60150.65234375
+sewa,HCN1,Fall19,River otter,1,36,61698.06640625
+sewa,HFW1,Fall19,Coyote,2,33,97799.8984375
+sewa,IRP1,Fall19,Coyote,8,31,131548.046875
+sewa,JBP1,Fall19,Coyote,2,46,134804.484375
+sewa,LTP1,Spring19,Raccoon,7,34,109735.8125
+sewa,LWP2,Summer19,Eastern gray squirrel,7,23,119529.4296875
+sewa,MBC1,Fall19,Black-tailed deer,6,31,201386.109375
+sewa,MGP1,Fall19,Raccoon,1,31,87185.8125
+sewa,MPO1,Fall19,Virginia opossum,3,35,104551.6796875
+sewa,MSR1,Fall19,Raccoon,1,36,78423.8203125
+sewa,MWP1,Spring19,Virginia opossum,2,32,84471.46875
+sewa,NRP1,Fall19,Coyote,1,31,125898.234375
+tawa,P-BLP,Spring19,Coyote,1,35,60285.33203125
+tawa,P-CCP,Spring19,Coyote,2,15,71848.015625
+tawa,P-CUP,Spring19,Coyote,16,38,107747.171875
+tawa,P-DPV,Spring19,Eastern gray squirrel,27,37,84868
+tawa,P-GP,Spring19,Coyote,4,38,74638.7734375
+tawa,P-GW1,Winter19,Coyote,3,29,92236.40625
+tawa,P-JCP,Winter19,Eastern gray squirrel,19,15,83236.4296875
+tawa,P-LCC,Spring19,Coyote,1,10,71365.0546875
+tawa,P-MCP,Spring19,Eastern gray squirrel,20,38,45579.37890625
+tawa,P-MKP2,Spring19,Eastern gray squirrel,18,33,65988.3671875
+tawa,P-OB,Spring19,Eastern gray squirrel,16,37,84868
+tawa,P-OLT,Spring19,Coyote,6,36,64019
+tawa,P-OV1,Winter19,Bobcat,2,28,68914.484375
+tawa,P-PCNA2,Spring19,Coyote,1,38,110701.6875
+tawa,P-PDP,Spring19,Coyote,1,37,84868
+tawa,P-RP,Spring19,Coyote,7,38,83003.484375
+tawa,P-RT,Spring19,Eastern gray squirrel,7,35,65154.90234375
+tawa,P-RWSR,Spring19,Coyote,35,36,66338.4765625
+tawa,P-SCP2,Spring19,Eastern gray squirrel,8,24,55137.203125
+tawa,P-STP,Spring19,Coyote,1,38,101337.6796875
+tawa,P-TE1,Spring19,Douglas squirrel,3,23,68533.9609375
+tawa,P-UCC,Spring19,Coyote,1,30,85166.6015625
+tawa,P-UWT,Spring20,Eastern gray squirrel,8,49,62460.62109375
+tawa,P-WBC,Spring19,Eastern gray squirrel,59,35,64678.7578125
+tawa,P-WP,Spring19,Eastern gray squirrel,43,16,54801.02734375
+tawa,P-WWP,Spring19,Coyote,4,35,68550.7421875
+sewa,PGP1,Spring19,Eastern gray squirrel,1,29,90742.4296875
+sewa,PHN1,Fall19,Raccoon,3,31,111462.4375
+sewa,RHF1,Fall19,Virginia opossum,2,36,137418.390625
+sewa,RVP1,Fall19,Coyote,2,31,89371.9453125
+sewa,RWP1,Fall19,Virginia opossum,4,31,110551.0625
+sewa,SVP1,Fall19,Coyote,4,31,156339.53125
+sewa,SWD1,Fall19,Coyote,4,32,204164.5625
+sewa,TCC1,Fall19,Coyote,1,36,83163.5078125
+sewa,TMF1,Fall19,Bobcat,1,35,116052
+sewa,TMP1,Fall19,Raccoon,10,41,90758.0546875
+sewa,TRN1,Fall19,Virginia opossum,2,35,94875.0078125
+sewa,WCP2,Spring20,Raccoon,1,30,54790.89453125
+sewa,WDG1,Fall19,Eastern gray squirrel,2,36,81032.1328125

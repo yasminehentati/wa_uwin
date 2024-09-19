@@ -8,27 +8,21 @@
 
 
 # packages
-library(readr)
-library(here)
-library(tidyr)
-library(vegan)
-library(ggplot2)
-library(viridis)
-library(cowplot)
-library(dplyr)
-library(tibble)
+library(pacman)
+p_load(readr,here,tidyr,vegan,ggplot2,viridis,cowplot,dplyr,tibble)
 
 # read in count data
 counts <- read_csv(here("data", "wa_counts.csv"))
 
 # add together all occurrences of each spp per site (for grouped spp) 
-counts_sum <- counts %>% group_by(species, site, city, season) %>% summarise(ySum = sum(count))
-counts_sum
-
+# keep days active
+counts_sum <- counts %>% group_by(species, site, city, 
+                                  season, lat, long, days.active) %>%
+  summarise(ySum = sum(count), .groups = 'drop')  # Use .groups = 'drop' to ungroup after summarising
 
 # pivot into wide format 
 wide_counts <- counts_sum %>% pivot_wider(names_from = "species", values_from = "ySum")
-wide_counts
+colnames(wide_counts)
 
 # replace all NAs with 0s
 wide_counts <- wide_counts %>% mutate_all(~replace(., is.na(.), 0))
@@ -39,7 +33,8 @@ counts_all <- wide_counts %>% distinct(site, season, .keep_all = TRUE)
 colnames(counts_all)
 glimpse(counts_all)
 # pivot back to long format 
-counts_long <- pivot_longer(counts_all, cols = 4:20, names_to = "species")
+colnames(counts_all)
+counts_long <- pivot_longer(counts_all, cols = 7:23, names_to = "species")
 head(counts_long)
 
 ###############################################################################
@@ -50,7 +45,7 @@ head(counts_long)
 # using vegan
 
 # with this method, we will get rid of seasons altogether 
-counts_year <- counts_long  %>% dplyr::select(-season) %>% 
+counts_year <- counts_long  %>% dplyr::select(-season, lat, long, days.active) %>% 
   group_by(site, species) %>% summarize(value = sum(value))
 glimpse(counts_year)
 
@@ -96,11 +91,9 @@ tawa_sitecovs <- read_csv(here("data", "covariates", "TAWA_ALL_ENV_URB_SITES_100
 
 vegandf <- left_join(vegandf, sitecovs, by = "site")
 
-sewa_vegandf <- vegandf %>% filter(city == "sewa") %>%
-  left_join(sewa_sitecovs, by = "site")
+sewa_vegandf <- vegandf %>% filter(city == "sewa") 
 
-tawa_vegandf <- vegandf %>% filter(city == "tawa") %>%
-  left_join(tawa_sitecovs, by = "site")
+tawa_vegandf <- vegandf %>% filter(city == "tawa") 
 
 write_csv(vegandf, here("data", "covariates", "vegan_sites_all_covs.csv"))
 write_csv(sewa_vegandf, here("data", "covariates", "sewa_vegan_sites_all_covs.csv"))
@@ -109,31 +102,24 @@ write_csv(sewa_vegandf, here("data", "covariates", "tawa_vegan_sites_all_covs.cs
 # bind wide counts to covariates 
 # add J as well 
 
-counts_all <- left_join(counts_all, counts[,c("site","season", "days.active")], 
-                        by = c("site","season"))
-
 all_wide <- left_join(counts_all, sitecovs, by = c("city", "site")) %>%
   distinct() 
-
+glimpse(all_wide)
 write_csv(all_wide, here("data", "covariates", "WIDE_COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
 
 # seattle wide data 
-sewa_counts_all <- counts_all %>% filter(city == "sewa") %>%
-  left_join(counts[,c("site","season", "days.active")], 
-                        by = c("site","season"))
+sewa_counts_all <- counts_all %>% filter(city == "sewa")
 
-sewa_all_wide <- left_join(sewa_counts_all, sewa_sitecovs, by = c("site")) %>%
+sewa_all_wide <- left_join(sewa_counts_all, sewa_sitecovs, by = c("city", "site")) %>%
   distinct() 
-
+glimpse(sewa_all_wide)
 write_csv(sewa_all_wide, here("data", "covariates", "SEWA_WIDE_COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
 
 
 # tacoma wide data
-tawa_counts_all <- counts_all %>% filter(city == "tawa") %>%
-  left_join(counts[,c("site","season", "days.active")], 
-            by = c("site","season"))
+tawa_counts_all <- counts_all %>% filter(city == "tawa") 
 
-tawa_all_wide <- left_join(tawa_counts_all, tawa_sitecovs, by = c("site")) %>%
+tawa_all_wide <- left_join(tawa_counts_all, tawa_sitecovs, by = c("city", "site")) %>%
   distinct() 
-
+glimpse(tawa_all_wide)
 write_csv(tawa_all_wide, here("data", "covariates", "TAWA_WIDE_COUNTS_ALL_ENV_URB_SITES_1000m.csv"))

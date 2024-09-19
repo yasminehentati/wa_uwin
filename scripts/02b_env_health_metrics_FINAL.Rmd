@@ -13,10 +13,10 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(pacman)
 
-p_load(dplyr,here,sf,mapview,remotes,tidycensus,
+p_load(here,sf,mapview,remotes,tidycensus,
        tidyr,terra,spatialEco,readr,ggfortify,exactextractr,spatstat,
        spdep,landscapemetrics,tmap,viridis,gghighlight,purrr,plainview,tidyterra,
-       crsuggest,janitor)
+       crsuggest,janitor,dplyr)
 
 # note that mapview is somewhat demanding, consider skipping
 # mapview functions if your computer is slow  - these are just used to check 
@@ -157,6 +157,7 @@ ggplot(data = envdatSP) +
   labs(fill = "number units with lead hazard")
 
 ```
+
 
 ## 1. Calculate site values for lead risk 
 ```{r}
@@ -304,6 +305,7 @@ print(pm2.5_dat)
 # save
 #write_csv(pm2.5_dat, here("data", "covariates", "pm2.5_dat.csv"))
 ```
+
 
 
 ## 3. Calculate site values for proximity to hazardous waste (PTSDF)
@@ -900,14 +902,14 @@ listdfs <- list(lead_dat, pm2.5_dat, ptsdf_dat, traffic_dat,
                 pnpl_dat, rsei_dat, pwdis_dat, 
                 diesel_dat, prmp_dat, ozone_dat)
 
-
+?select
 # define a function to keep only desired columns
 keep_columns <- function(df) {
   df %>%  # Keep city, site, and all other columns
-    { if ("season" %in% colnames(.)) select(., -season) else . } %>%  
-    { if ("species" %in% colnames(.)) select(., -species) else . } %>%   
-    { if ("count" %in% colnames(.)) select(., -count) else . } %>%  
-    { if ("dys_ctv" %in% colnames(.)) select(., -dys_ctv) else . }   
+    { if ("season" %in% colnames(.)) dplyr::select(., -season) else . } %>%  
+    { if ("species" %in% colnames(.)) dplyr::select(., -species) else . } %>%   
+    { if ("count" %in% colnames(.)) dplyr::select(., -count) else . } %>%  
+    { if ("dys_ctv" %in% colnames(.)) dplyr::select(., -dys_ctv) else . }   
 }
 
 # apply to all dfs in list 
@@ -963,17 +965,17 @@ pollutants <- pollutants %>%
 keep_columns_sewa <- function(df) {
   df %>%
     filter(city == "sewa") %>%  # Filter rows based on the condition
-    { if ("season" %in% colnames(.)) select(., -season) else . } %>%  
-    { if ("species" %in% colnames(.)) select(., -species) else . } %>%   
-    { if ("count" %in% colnames(.)) select(., -count) else . } %>%  
-    { if ("dys_ctv" %in% colnames(.)) select(., -dys_ctv) else . }   
+    { if ("season" %in% colnames(.)) dplyr::select(., -season) else . } %>%  
+    { if ("species" %in% colnames(.)) dplyr::select(., -species) else . } %>%   
+    { if ("count" %in% colnames(.)) dplyr::select(., -count) else . } %>%  
+    { if ("dys_ctv" %in% colnames(.)) dplyr::select(., -dys_ctv) else . }    
 }
 # Apply the function to each data frame in the list
 cleaned_dfs_sewa <- map(listdfs, keep_columns_sewa)
 
 
 # combine data by city/site and remove tawa 
-pollutants_sewa <- cleaned_dfs_sewa %>% reduce(full_join, by = c("site")) 
+pollutants_sewa <- cleaned_dfs_sewa %>% reduce(full_join, by = c("city", "site")) 
 pollutants_sewa
 #create percentile for each metric. we'll use this to create the pollution burden score later
 pollutants_sewa <- pollutants_sewa %>%
@@ -1020,17 +1022,17 @@ pollutants_sewa <- pollutants_sewa %>%
 keep_columns_tawa <- function(df) {
   df %>%
     filter(city == "tawa") %>%  # Filter rows based on the condition
-    { if ("season" %in% colnames(.)) select(., -season) else . } %>%  
-    { if ("species" %in% colnames(.)) select(., -species) else . } %>%   
-    { if ("count" %in% colnames(.)) select(., -count) else . } %>%  
-    { if ("dys_ctv" %in% colnames(.)) select(., -dys_ctv) else . }   
+    { if ("season" %in% colnames(.)) dplyr::select(., -season) else . } %>%  
+    { if ("species" %in% colnames(.)) dplyr::select(., -species) else . } %>%   
+    { if ("count" %in% colnames(.)) dplyr::select(., -count) else . } %>%  
+    { if ("dys_ctv" %in% colnames(.)) dplyr::select(., -dys_ctv) else . }    
 }
 # Apply the function to each data frame in the list
 cleaned_dfs_tawa <- map(listdfs, keep_columns_tawa)
 
 
 # combine data by city/site and remove tawa 
-pollutants_tawa <- cleaned_dfs_tawa %>% reduce(full_join, by = c("site")) 
+pollutants_tawa <- cleaned_dfs_tawa %>% reduce(full_join, by = c("city", "site")) 
 
 #create percentile for each metric. we'll use this to create the pollution burden score later
 pollutants_tawa <- pollutants_tawa %>%
@@ -1074,17 +1076,31 @@ write.csv(pollutants, here("data", "covariates", "pollutants_all.csv"))
 write.csv(pollutants_sewa, here("data", "covariates", "sewa_pollutants_all.csv"))
 write.csv(pollutants_tawa, here("data", "covariates", "tawa_pollutants_all.csv"))
 
-## stop here if not merging data 
+```
+
+## combine with urbanization covariates from 2a
+```{r}
 # bring in urbanization covariate data and merge 
 
 urbcovs <- read_csv(here("data", "covariates", "sitecov_1000m_sewatawa_allsites.csv"))
+glimpse(pollutants)
+
+pollutants <- read_csv(here("data", "covariates", "pollutants_all.csv")) %>% 
+  dplyr::select(-1)
+pollutants_sewa <- read_csv(here("data", "covariates", "sewa_pollutants_all.csv")) %>%
+  dplyr::select(-1)
+pollutants_tawa <- read_csv(here("data", "covariates", "tawa_pollutants_all.csv")) %>%
+  dplyr::select(-1)
 
 sewa_urbcovs <- urbcovs %>% filter(city == "sewa")
 tawa_urbcovs <- urbcovs %>% filter(city == "tawa")
 
+pollutants
+
 all_covs <- left_join(urbcovs, pollutants, by = c("city", "site"))
-sewa_all_covs <- left_join(sewa_urbcovs, pollutants_sewa, by = c("site"))
-tawa_all_covs <- left_join(tawa_urbcovs, pollutants_tawa, by = c("site"))
+sewa_all_covs <- left_join(sewa_urbcovs, pollutants_sewa, by = c("city", "site"))
+tawa_all_covs <- left_join(tawa_urbcovs, pollutants_tawa, by = c("city", "site"))
+
 
 # write 
 write_csv(all_covs, here("data", "covariates", "ALL_ENV_URB_SITES_1000m.csv"))
@@ -1099,41 +1115,11 @@ sewa_counts <- counts %>% filter(city == "sewa")
 tawa_counts <- counts %>% filter(city == "tawa")
 
 all_data <- left_join(counts, all_covs, by = c("city", "site"))
-sewa_all_data <- left_join(sewa_counts, all_covs, by = c("site"))
-tawa_all_data <- left_join(sewa_counts, all_covs, by = c("site"))
+sewa_all_data <- left_join(sewa_counts, all_covs, by = c("city", "site"))
+tawa_all_data <- left_join(sewa_counts, all_covs, by = c("city", "site"))
 
 write_csv(all_data, here("data", "covariates", "COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
 write_csv(sewa_all_data, here("data", "covariates", "SEWA_COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
 write_csv(tawa_all_data, here("data", "covariates", "TAWA_COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
 
 ```
-
-
-## extra code 
-```{r}
-
-########## 
-
-## do not run -- only if adding a covariate in 02a
-library(here)
-library(readr)
-install.packages("conflicted")
-library(conflicted)
-urbcovs <- read_csv(here::here("data", "covariates", "sitecov_1000m_sewatawa_allsites.csv"))
-colnames(urbcovs)
-urbcovs <- urbcovs %>% dplyr::select(c(city, site, pop_density:prop_veg_avg))
-
-all_covs <- read_csv(here::here("data", "covariates", "ALL_ENV_URB_SITES_1000m.csv")) %>%
-  dplyr::select(-c(pop_density.x:prop_veg_avg.y))
-colnames(all_covs)
-all_covs <- left_join(all_covs, urbcovs, by = c("city", "site"))
-colnames(all_covs)
-write_csv(all_covs, here::here("data", "covariates", "ALL_ENV_URB_SITES_1000m.csv"))
-
-counts <- read_csv(here::here("data", "wa_counts.csv"))
-
-all_data <- left_join(counts, all_covs, by = c("city", "site"))
-
-write_csv(all_data, here::here("data", "covariates", "COUNTS_ALL_ENV_URB_SITES_1000m.csv"))
-```
-

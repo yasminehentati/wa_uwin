@@ -14,7 +14,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(pacman)
 p_load(dplyr,here,sf,devtools,mapview,here,remotes,tidycensus,crsuggest,
        tidyr,terra,spatialEco,readr,ggfortify,exactextractr,
-       spatstat,spdep,landscapemetrics,tmap,viridis,gghighlight)
+       spatstat,spdep,landscapemetrics,tmap,viridis,gghighlight,ggcorrplot,
+       GGally,magrittr)
 
 ```
 
@@ -166,21 +167,47 @@ Code adapted from Jeff Haight
 ```{r}
 # NLCD landcover 
 
-# put 
-nalc <- rast("data/landcover/USA_NALCMS_landcover_2015v3_30m.tif")  %>% terra::project("EPSG:32610")
+# reproject our SFs
+wa_housing <- st_transform(wa_housing, crs = st_crs("EPSG:32610")) 
+sites <- st_transform(sites, crs = st_crs(nalc2)) 
 
-wa_housing <- st_transform(wa_housing, crs = "EPSG:32610")  
-nalc <- nalc %>% crop(ext(wa_housing))
-
+memory.limit(size = 16000)  # Set to 8000 MB (8 GB), adjust as needed
 # impervious surface cover for the Contiguous US
-is <-rast("data/NLCD_imp/nlcd_2019_impervious_descriptor_l48_20210604.img") %>%
-  crop(ext(wa_housing)) %>% terra::project("EPSG:32610")
+#is <-rast("data/NLCD_imp/nlcd_2019_impervious_l48_20210604.img") 
 
+# this file is huge so we'll convert it into a .tif file for easier processing 
+#terra::writeRaster(is, here("data", "NLCD_imp", "nlcd-2019_impervious_l48_20210604.tif"), 
+# filetype = "GTiff")
+
+#is <-rast(here("data", "NLCD_imp", "nlcd-2019_impervious_l48_20210604.tif")) 
+
+# first crop to state of washington extent in correct coordinates
+
+# define extent
+#wa_extent <- ext(c(xmin = -124.848974, xmax = -116.916944, 
+    #               ymin = 45.543541, ymax = 49.002494))  
+#
+# create a polygon from the extent 
+#wa_polygon <- vect(wa_extent, crs = "EPSG:4326")  
+
+# match raster crs 
+#wa_extent_albers <- ext(st_transform(st_as_sf(wa_polygon), crs(is)))
+
+#crop the raster and reproject/crop again to our sf 
+#is <- crop(is, wa_extent_albers) %>%
+ # terra::project("EPSG:32610") %>% mask(ext(wa_housing)) 
+
+# save the cropped raster so we dont have to do this again
+#writeRaster(is, here("data", "NLCD_imp", "washington_NLCD_imp_32610.tif"))
+
+is <-rast(here("data", "NLCD_imp", "washington_NLCD_imp_32610.tif"))
+          
 is_dat <- st_drop_geometry(sites) %>%
   dplyr::mutate(Impervious = NA_real_)
 
+print(is)
 # set buffer radius
-buffer_radius <- 500
+buffer_radius <- 1000
 
 Sys.time()
 
@@ -209,11 +236,10 @@ for (i in 1:nrow(sites)) {
                                    weights = "area")
   is_dat$Impervious[i] <- extracted_value
   
-  
   # Plot the results
   
   p <- ggplot() +
-    geom_raster(rast_cropped, mapping = aes(x = x, y = y, fill = Impervious)) +
+    geom_raster(rast_cropped, mapping = aes(x = x, y = y, fill = Layer_1)) +
     #   scale_fill_manual() +
     geom_sf(data = st_as_sf(buff_terra), fill = NA, color = "red", size = 1) +
     geom_sf(data = sites[i,], color = "blue", size = 3) +
@@ -235,37 +261,57 @@ Sys.time()
 # Check the final results
 print(is_dat)
 
-
 write_csv(is_dat, here("data", "covariates", "is_dat.csv"))
+
 
 ```
 
 ## Land cover categories + landscape metrics
 Code adapted from Jeff Haight
 ```{r}
+# this code doesn't work in 32610, and converts hectares to meters for us anyway--
+# so we'll keep nalc in its projection and change everything else 
 
-# directions on how to reclassify land cover categories
-m <- c(1, 20,  # set all the natural land cover types to 20
-       2, 20,
-       3, 20,
-       4, 20,
-       5, 20,
-       6, 20,
-       7, 20,
-       8, 20,
-       9, 20,
-       10, 20,
-       11, 20,
-       12, 20,
-       13, 20,
-       14, 20,
-       16, 20)
+# read in data
+nalc2 <- rast("data/landcover/USA_NALCMS_landcover_2015v3_30m.tif") 
+
+wa_housing <- st_transform(wa_housing, crs = st_crs(nalc2)) 
+sites <- st_transform(sites, crs = st_crs(nalc2)) 
+nalc2 <- nalc2 %>% crop(ext(wa_housing))
+
+# Compositional metrics (land cover proportions)
+metrics_comp <- matrix(0, nrow = nrow(sites), ncol = 19)  # there are 19 land cover classes in the Canada LC
+colnames(metrics_comp) <- c("for_ever_temp",
+                            "for_ever_taig",   #
+                            "for_ever_trop",
+                            "for_dec_trop",
+                            "for_dec_temp",
+                            "for_mix", 
+                            "shrub_trop", 
+                            "shrub_temp", 
+                            "grass_trop",
+                            "grass_temp",
+                            "shrub_lich",
+                            "grass_lich",
+                            "barren_lich",
+                            "wetland",
+                            "cropland",
+                            "barren", 
+                            "urban", 
+                            "water",
+                            "ice" 
+)
+
+# Configurational metrics (patchiness/heterogeneity)
+metrics_conf <- matrix(0, nrow = nrow(sites), ncol = 5)
+colnames(metrics_conf) <- c("mpa_undev", "pd_undev", "ed_undev", "enn_mn_undev", "sdhi")
+
 
 start_time <- Sys.time()
 
-for(i in 1:nsite){
+for(i in 1:nrow(sites)){
   pt <- sites[i,]                                         # select a point
-  buff <- vect(st_transform(pt, crs(nalc)))
+  buff <- vect(st_transform(pt, crs(nalc2)))
   buff <- terra::buffer(buff, width = buffer_radius) 
   
   # need to give it a bit extra extent 
@@ -278,7 +324,7 @@ for(i in 1:nsite){
   buff <- crop(buff, buff_ext)
   
   # crop/mask raster
-  ls_pre <- nalc %>%
+  ls_pre <- nalc2 %>%
     crop(buff) %>%
     mask(buff)
   
@@ -436,7 +482,7 @@ for(i in 1:nsite){
   )
   rcmat <- matrix(m, ncol = 2, byrow = TRUE)
   
-  ls <- reclassify(ls_pre, rcmat)
+  ls <- classify(ls_pre, rcmat)
   
   
   # Class-level metrics
@@ -444,7 +490,7 @@ for(i in 1:nsite){
   pd <- lsm_c_pd(ls)         # Patch density for each class
   ed <- lsm_c_ed(ls)         # Edge density for each class
   enn <- lsm_c_enn_mn(ls)   # Mean Euclidean nearest-neighbor distance ('overall patch isolation')
-  
+
   
   # Mean patch area for the natural patches
   lsm_type <- mpa %>%                               
@@ -475,7 +521,6 @@ for(i in 1:nsite){
   }
   
   
-  
   # Landscape-level metrics
   sdhi <- lsm_l_shdi(ls)     # Shannon's index for patch diversity
   metrics_conf[i,5] <- sdhi$value
@@ -486,30 +531,57 @@ for(i in 1:nsite){
   #print(sites[i,]$site)  
 }
 
-end_time <- Sys.time()
+metrics_comp
+metrics_conf
 end_time <- Sys.time()
 
 elapsed_time <- difftime(end_time, start_time, units='mins')
 cat(paste(paste('Metrics calculated in ', elapsed_time, sep=''), ' minutes', sep=''))
 
+metrics_comp
+
+lsm_dat <- cbind(sites, metrics_comp, metrics_conf) %>%
+  st_drop_geometry()
+
+
+
+# add columns combining class areas
+lsm_dat <- lsm_dat %>% 
+  mutate(
+    # all forest types
+    for_all = (for_ever_temp + for_ever_taig + for_ever_trop + for_dec_trop + for_dec_temp + for_mix),
+    # all shrubland types
+    shrub_all = (shrub_trop + shrub_temp + shrub_lich),
+    # all grassland types
+    grass_all = (grass_trop + grass_temp + grass_lich),
+    # all woody vegetation cover types (excluding herbaceous grassland cover)
+    veg_woody = (for_ever_temp + for_ever_taig + for_ever_trop + for_dec_trop + for_dec_temp + for_mix + shrub_trop + shrub_temp + shrub_lich),  
+    # all vegetation cover types (woody and herbaceous). 'Wetland' does not necessarily represent
+    veg_all = (for_ever_temp + for_ever_taig + for_ever_trop + for_dec_trop + for_dec_temp + for_mix + shrub_trop + shrub_temp + shrub_lich + grass_trop + grass_temp + grass_lich),      
+    # all natural/undeveloped/minimally-developed land cover classes
+    natural = (for_ever_temp + for_ever_taig + for_ever_trop + for_dec_trop + for_dec_temp + for_mix + shrub_trop + shrub_temp + grass_trop + grass_temp + shrub_lich + grass_lich + barren_lich + wetland + barren + ice),
+    # anthropogenic land cover types
+    develop = (urban + cropland)
+  ) %>%
+  arrange(city, site)
+
+write_csv(lsm_dat, here("data", "covariates", "lsm_dat.csv"))
 ```
 
 ## Calculate relationships between landscape metrics 
 Code adapted from Jeff Haight 
-### Did not run this 
 ```{r}
+##### RELATIONSHIPS BETWEEN lANDSCAPE METRICS
+
+data_ls <- read.csv("data/covariates/lsm_dat.csv", header = TRUE) %>% 
+   mutate(across(everything(), ~ replace_na(., 0)))
 
 
-##### RELATIUONSHIPS BETWEEN lANDSCAPE METRICS
-
-library(ggcorrplot)
-library(GGally)
-
-data_ls <- read.csv("data/covariates/sitecov_landscapemetrics_1000m_sewatawa_allsites.csv", header = TRUE)
-data_ls$ice <- as.numeric(data_ls$ice)    # 'ice' should be a proportion like the rest, even though that proportion is 0
-
+colnames(data_ls)
 #landscape_correlations <- round(cor(data_ls[,c(8,10:27)], use = "complete.obs"), 1)
-landscape_correlations <- cor(data_ls[,c(8,10:27)], use = "complete.obs")
+landscape_correlations <- cor(data_ls[,c(7:25,31:37)], use = "complete.obs")
+landscape_correlations
+
 ggcorrplot(landscape_correlations, 
            #method = "circle", 
            #hc.order = TRUE, 
@@ -521,13 +593,11 @@ ggcorrplot(landscape_correlations,
   ggplot2::theme(
     axis.title.x = element_text(angle = 0, color = 'grey20'),
     axis.title.y = element_text(angle = 90, color = 'grey20'))
+
 #ggpairs(data_ls[,c(8,10:21,23:24)], title="correlogram with ggpairs()")  # takes a minute and looks a bit messy
 #landscape_correlations <- pairs(data_ls[,c(8,10:21,23:27)])
 
 #landscape_correlations
-
-
-
 
 
 ### Developed Land Cover vs. Mean Patch Area
@@ -607,12 +677,12 @@ landcover_ternary <- ggtern(data = data_ls, aes(x = develop, y = natural, z = cr
 landcover_ternary
 
 ### Patch Density vs. Patch Isolation (Undeveloped patches)
-
 ggplot(data = data_ls, aes(x = pd_undev, y = enn_mn_undev, color = city)) +
   geom_point() +
   #stat_smooth(method = "lm", formula = y ~ x + I(x^2), lwd = 0.7, alpha = 0.1, se = FALSE)+
-  gghighlight(city %in% c("chil")) +
+ # gghighlight(city %in% c("sewa")) +
   labs(x = "Undeveloped Patch Density", y = "Undeveloped Patch Isolation")
+
 
 ```
 
@@ -620,12 +690,11 @@ ggplot(data = data_ls, aes(x = pd_undev, y = enn_mn_undev, color = city)) +
 ```{r}
 ## INCOME DATA
 ## median household income data from American Community Survey
-
-Sys.getenv("CENSUS_API_KEY")
+#Sys.getenv("CENSUS_API_KEY")
 # load census API key
-census_api_key("e649b78a1d98fe7e1c9ff7039840781976777eb6",
-    install = TRUE)
- readRenviron("~/.Renviron")
+#census_api_key("e649b78a1d98fe7e1c9ff7039840781976777eb6",
+#               install = TRUE)
+#readRenviron("~/.Renviron")
 
 # load in ACS variables  from 2019 
 v19 <- load_variables(2019, "acs5", cache = TRUE)
@@ -641,32 +710,28 @@ tractincomeWA <- get_acs(state = "WA",
 # since acs now automatically calls 2017-2021 
 
 # cut out everything except king and pierce county from our WA shp 
-# specify dplyr because rgdal also has filter fxn 
 # do this using the GEOID codes for each county 
 
 tractsKP <- tractincomeWA %>% dplyr::filter(substr(GEOID, 1, 5) 
                                             %in% c("53033", "53053"))
 
-mapview(tractsKP) # looks good
-
+#mapview(tractsKP) # looks good
 # crop to actual study area 
 tractsKP <- st_transform(tractsKP, crs=4326)
 tractsKP_crop <- st_crop(tractsKP, c(xmin= -121.7, ymin = 46.7, xmax = -122.8, ymax = 47.8))
-mapview(tractsKP_crop)
 
 # write shapefiles for cropped area 
 st_write(tractsKP_crop, here("data", "income_maps", "seatac_urban_med_income.shp"),
-     append = FALSE)
+         append = FALSE)
 
 # now rasterize and calculate 
-
-st_transform(tractsKP_crop, crs = "EPSG:32610")  
+tractsKP_crop <- st_transform(tractsKP_crop, crs = "EPSG:32610")  
 template <- rast(ext(tractsKP_crop), resolution=100, crs="EPSG:32610")
-rast <- terra::rasterize(vect(tractsKP_crop), template, field = "medincome")
+rast <- terra::rasterize(vect(tractsKP_crop), template, field = "estimate")
 
 # initialize new col for data
 income_dat <- st_drop_geometry(sites) %>%
-  dplyr::mutate(medincome = NA_real_)
+  dplyr::mutate(med_income = NA_real_)
 
 # set buffer radius
 buffer_radius <- 1000
@@ -696,24 +761,24 @@ for (i in 1:nrow(sites)) {
   # xxtract values within the buffer, calculate mean
   extracted_value <- exact_extract(rast_masked, st_as_sf(buff_terra), fun = "mean", 
                                    weights = "area")
-  income_dat$medincome[i] <- extracted_value
+  income_dat$med_income[i] <- extracted_value
   
   # Plot the results
   
-  p <- ggplot() +
-    geom_raster(rast_cropped, mapping = aes(x = x, y = y, fill = medincome)) +
+#  p <- ggplot() +
+  #  geom_raster(rast_cropped, mapping = aes(x = x, y = y, fill = estimate)) +
     #   scale_fill_manual() +
-    geom_sf(data = st_as_sf(buff_terra), fill = NA, color = "red", size = 1) +
-    geom_sf(data = sites[i,], color = "blue", size = 3) +
-    coord_sf(crs = st_crs(rast), datum = st_crs(rast)) +
-    labs(title = paste("Site:", i),
-         x = "Easting (m)", y = "Northing (m)",
-         fill = "Raster Value") +
-    theme_minimal()
+ #   geom_sf(data = st_as_sf(buff_terra), fill = NA, color = "red", size = 1) +
+ #   geom_sf(data = sites[i,], color = "blue", size = 3) +
+ #   coord_sf(crs = st_crs(rast), datum = st_crs(rast)) +
+  #  labs(title = paste("Site:", i),
+ #        x = "Easting (m)", y = "Northing (m)",
+  #       fill = "Raster Value") +
+ #   theme_minimal()
   
   # Save the plot
   # ggsave(filename = paste0("plots/plot_site_", i, ".png"), plot = p, width = 8, height = 6)
-  print(p) 
+#  print(p) 
   Sys.sleep(2)
   print(i)
 }
@@ -721,10 +786,11 @@ for (i in 1:nrow(sites)) {
 Sys.time()
 
 # Check the final results
-print(medincome_dat)
+print(income_dat)
 
-write_csv(medincome_dat, here("data", "covariates", "medincome_dat.csv"))
+write_csv(income_dat, here("data", "covariates", "medincome_dat.csv"))
 ```
+
 
 ## Calculate site values for NDVI
 Code adapted from Gina Rosa Cova and Travis Gallo
@@ -741,93 +807,145 @@ Code adapted from Gina Rosa Cova and Travis Gallo
 
 # load LandSat NDVI raster from GRC GEE code 
 
-ndvi_kp <- raster(here("data", "NDVI_data", "NDVI2020SEWATAWA3038_1.tif")) 
+ndvi_kp <- rast(here("data", "NDVI_data", "NDVI2020SEWATAWA3038_1.tif")) %>%
+  terra::project("EPSG:32610")
 
-# reproject points to raster crs 
-sites <- st_transform(sites, crs = st_crs(ndvi_kp))
+sites <- st_transform(sites, crs = "EPSG:32610")
 
-# extract the proportion of the buffer that has an NDVI greater than 0.2 (vegetation cover)
-# this returns a list, so we can use lapply to calculate the proportion for each site
+# extract the proportion of the buffer that has an NDVI greater than 0.5 (vegetation cover)
 
-ndvi_extract <- terra::extract(ndvi_kp, points_wa, buffer = 1000) # in m
+# initialize a data frame to store results
+prop_ndvi_greater0.5 <- data.frame(site = integer(), proportion_vegetation = numeric())
 
-# calculate the proportion of a site that is covered in vegetation
-prop_ndvi_greater0.5 <- lapply(ndvi_extract, function (x){
-  # turn values greater than 0.5 to 1 (these are cells that are covered in vegetation)
-  x[which(x > 0.5)] <- 1
-  # turn values less than 0.5 to 0 (these are cells that are not vegetation)
-  x[which(x <= 0.5)] <- 0
-  # proportion of cells that are vegetation
-  sum(x, na.rm = TRUE)/length(x) })
+# loop through each site
+for (i in 1:nrow(sites)) {
+  # Create a buffer for the current site
+  buffered_site <- terra::buffer(vect(sites[i, ]), width = 1000)  # Adjust buffer width as needed
+  
+  # Extract values from the NDVI raster using the buffered site
+  buffered_values <- terra::extract(ndvi_kp, buffered_site, df = TRUE)
+  
+  # Calculate the proportion of NDVI values greater than 0.5
+  if (nrow(buffered_values) > 0) {
+    # Replace NA values with 0 for the calculation
+    ndvi_values <- ifelse(is.na(buffered_values[, 2]), 0, buffered_values[, 2])
+    
+    # Calculate the proportion
+    proportion_vegetation <- sum(ndvi_values > 0.5) / length(ndvi_values)
+  } else {
+    proportion_vegetation <- NA  # Handle case where no values are extracted
+  }
+  
+  # Store the results
+  prop_ndvi_greater0.5 <- rbind(prop_ndvi_greater0.5, data.frame(site = sites[i, ]$site, proportion_vegetation = proportion_vegetation))
+}
+
+# Print the results
+print(prop_ndvi_greater0.5)
 
 
-# turn list into a vector
-prop_veg_5 <- do.call(c, prop_ndvi_greater0.5)
-prop_veg_5
+# calculate the proportion of a site that is covered in vegetation (greater than 0.6)
 
-# calculate the proportion of a site that is covered in vegetation
-prop_ndvi_greater0.6 <- lapply(ndvi_extract, function (x){
-  # turn values greater than 0.6 to 1 (these are cells that are covered in vegetation)
-  x[which(x > 0.6)] <- 1
-  # turn values less than 0.6 to 0 (these are cells that are not vegetation)
-  x[which(x <= 0.6)] <- 0
-  # proportion of cells that are vegetation
-  sum(x, na.rm = TRUE)/length(x) })
+# initialize a data frame to store results
+prop_ndvi_greater0.6 <- data.frame(site = integer(), proportion_vegetation = numeric())
+
+# loop through each site
+for (i in 1:nrow(sites)) {
+  # Create a buffer for the current site
+  buffered_site <- terra::buffer(vect(sites[i, ]), width = 1000)  # Adjust buffer width as needed
+  
+  # Extract values from the NDVI raster using the buffered site
+  buffered_values <- terra::extract(ndvi_kp, buffered_site, df = TRUE)
+  
+  # Calculate the proportion of NDVI values greater than 0.5
+  if (nrow(buffered_values) > 0) {
+    # Replace NA values with 0 for the calculation
+    ndvi_values <- ifelse(is.na(buffered_values[, 2]), 0, buffered_values[, 2])
+    
+    # Calculate the proportion
+    proportion_vegetation <- sum(ndvi_values > 0.6) / length(ndvi_values)
+  } else {
+    proportion_vegetation <- NA  # Handle case where no values are extracted
+  }
+  
+# Store the results
+  prop_ndvi_greater0.6 <- rbind(prop_ndvi_greater0.6, data.frame(site = sites[i, ]$site, proportion_vegetation = proportion_vegetation))
+}
 
 
-# turn list into a vector
-prop_veg_6 <- do.call(c, prop_ndvi_greater0.6)
-prop_veg_6
+# Print the results
+print(prop_ndvi_greater0.6)
 
-# calculate the proportion of a site that is covered in vegetation
-prop_ndvi_avg <- lapply(ndvi_extract, function (x){
-  mean(x) 
-  })
+## calculate average NDVI
 
-# turn list into a vector
-prop_veg_avg <- do.call(c, prop_ndvi_avg)
-prop_veg_avg
+# initialize a data frame to store results
+prop_ndvi_avg <- data.frame(site = integer(), ndvi_avg = numeric())
 
+# loop through each site
+for (i in 1:nrow(sites)) {
+  # Create a buffer for the current site
+  buffered_site <- terra::buffer(vect(sites[i, ]), width = 1000)  # Adjust buffer width as needed
+  
+  # Extract values from the NDVI raster using the buffered site
+  buffered_values <- terra::extract(ndvi_kp, buffered_site, df = TRUE)
+  
+  # Calculate the average NDVI value
+  if (nrow(buffered_values) > 0) {
+    # Remove NA values for the calculation
+    ndvi_values <- buffered_values[, 2]
+    avg_ndvi <- mean(ndvi_values, na.rm = TRUE)  # Calculate average, ignoring NA
+  } else {
+    avg_ndvi <- NA  # Handle case where no values are extracted
+  }
+  
+  # Store the results
+  prop_ndvi_avg <-rbind(prop_ndvi_avg, data.frame(site = sites[i, ]$site, ndvi_avg = avg_ndvi))
+}
+
+# Print the results
+print(prop_ndvi_avg)
+
+ndvi <- distinct(prop_ndvi_greater0.5) %>% left_join(distinct(prop_ndvi_greater0.6), by = "site") %>% 
+  left_join(distinct(prop_ndvi_avg), by = "site") %>%
+  set_colnames(c("site", "prop_ndvi_0.5", "prop_ndvi_0.6", "prop_ndvi_avg"))
+print(ndvi)
+
+write.csv(ndvi, here("data", "ndvi_dat.csv"))
+
+
+# merge ndvi data
+library(magrittr)
+ndvi <- distinct(prop_ndvi_greater0.5) %>% left_join(distinct(prop_ndvi_greater0.6), by = "site") %>% 
+  left_join(distinct(prop_ndvi_avg), by = "site") %>%
+  set_colnames(c("site", "prop_ndvi_0.5", "prop_ndvi_0.6", "prop_ndvi_avg"))
+
+write.csv(ndvi, here("data", "ndvi_dat.csv"))
 
 ```
 
+
 ## Combine data 
 ```{r}
-data_export <- cbind(sites, metrics_comp, metrics_conf, prop_veg_avg,
-                     prop_veg_6, prop_veg_5)
+
+# add NDVI results to landscape data 
+data_export <- lsm_dat %>% left_join(ndvi, by = "site")
 data_export
 
-data_export <- data_export %>% left_join(medincome_dat, by = c("city", "site")) %>%
-  left_Join(housing_dat, by = c("city", "site"))
+# add housing, income, impervious 
+data_export <- data_export %>% left_join(income_dat, by = c("city", "site")) %>%   
+  left_join(housing_dat, by = c("city", "site")) %>% 
+  left_join(is_dat, by = c("city", "site")) %>%
+    select(city, site, for_ever_temp:prop_ndvi_avg, POPDEN2020, med_income, Impervious) 
+
+colnames(data_export)
 
 # Make sure 'city' is a factor
 data_export$city <- as.factor(data_export$city)
 
-# add columns combining class areas
-data_export <- data_export %>% 
-  mutate(
-    # all forest types
-    for_all = (for_ever_temp + for_ever_taig + for_ever_trop + for_dec_trop + for_dec_temp + for_mix),
-    # all shrubland types
-    shrub_all = (shrub_trop + shrub_temp + shrub_lich),
-    # all grassland types
-    grass_all = (grass_trop + grass_temp + grass_lich),
-    # all woody vegetation cover types (excluding herbaceous grassland cover)
-    veg_woody = (for_ever_temp + for_ever_taig + for_ever_trop + for_dec_trop + for_dec_temp + for_mix + shrub_trop + shrub_temp + shrub_lich),  
-    # all vegetation cover types (woody and herbaceous). 'Wetland' does not necessarily represent
-    veg_all = (for_ever_temp + for_ever_taig + for_ever_trop + for_dec_trop + for_dec_temp + for_mix + shrub_trop + shrub_temp + shrub_lich + grass_trop + grass_temp + grass_lich),      
-    # all natural/undeveloped/minimally-developed land cover classes
-    natural = (for_ever_temp + for_ever_taig + for_ever_trop + for_dec_trop + for_dec_temp + for_mix + shrub_trop + shrub_temp + grass_trop + grass_temp + shrub_lich + grass_lich + barren_lich + wetland + barren + ice),
-    # anthropogenic land cover types
-    develop = (urban + cropland)
-  ) %>%
-  arrange(city, site)
-
-# make sure the city-site index column is filled
+# create a city-site index column
 data_export$city_site <- paste(data_export$city, data_export$site, sep = "_")
 
 ## export 
 write.csv(data_export,  "data/covariates/sitecov_1000m_sewatawa_allsites.csv", row.names = FALSE)
-
 
 ```
