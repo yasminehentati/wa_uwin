@@ -1,0 +1,75 @@
+city,site,season,species,count,dys_ctv,units_lead
+tawa,B-TP,Summer19,Coyote,1,35,292.0517272949219
+sewa,BGP1,Fall19,Virginia opossum,1,32,1216.28515625
+sewa,BRF1,Spring19,Raccoon,3,38,404.6304016113281
+sewa,DOS1,Fall19,Virginia opossum,1,36,140.52719116210938
+sewa,DRP2,Fall19,Raccoon,55,31,911.5985107421875
+sewa,DSP1,Fall19,Virginia opossum,14,31,1013.6840209960938
+sewa,DWP1,Fall19,Raccoon,5,36,383.8150634765625
+sewa,FGL1,Fall19,Raccoon,1,28,414.87628173828125
+sewa,FRD1,Fall19,Coyote,1,35,130.5272216796875
+tawa,G-CBP1,Winter19,Coyote,6,35,587.589111328125
+tawa,G-CLP3,Spring19,Douglas squirrel,3,38,508.2005310058594
+tawa,G-FP1,Spring19,Eastern gray squirrel,105,37,924.36187744140625
+tawa,G-IP,Spring20,Eastern gray squirrel,15,40,566.40093994140625
+tawa,G-JP,Spring19,Eastern gray squirrel,20,10,1001.3240356445313
+tawa,G-KP1,Spring19,Coyote,2,36,498.8313903808594
+tawa,G-OTP,Spring19,Coyote,1,33,552.40753173828125
+tawa,G-SB,Spring19,Douglas squirrel,15,37,477.4634094238281
+tawa,G-SERA,Spring20,Coyote,4,50,396.3266296386719
+tawa,G-SP,Winter19,Eastern gray squirrel,48,15,593.27850341796875
+tawa,G-TNC1,Winter19,Eastern gray squirrel,1,29,621.366943359375
+tawa,G-VP,Spring19,Coyote,1,37,226.02088928222656
+tawa,G-WLP1,Winter19,Coyote,1,28,254.99673461914063
+tawa,G-WP2,Spring19,Coyote,2,37,532.73974609375
+sewa,HCN1,Fall19,River otter,1,36,378.7683410644531
+sewa,HFW1,Fall19,Coyote,2,33,161.76058959960938
+sewa,IRP1,Fall19,Coyote,8,31,502.17449951171875
+sewa,JBP1,Fall19,Coyote,2,46,435.22589111328125
+sewa,LTP1,Spring19,Raccoon,7,34,714.4591064453125
+sewa,LWP2,Summer19,Eastern gray squirrel,7,23,829.9285888671875
+sewa,MBC1,Fall19,Black-tailed deer,6,31,57.03199005126953
+sewa,MGP1,Fall19,Raccoon,1,31,282.75335693359375
+sewa,MPO1,Fall19,Virginia opossum,3,35,109.32083129882813
+sewa,MSR1,Fall19,Raccoon,1,36,460.8978576660156
+sewa,MWP1,Spring19,Virginia opossum,2,32,457.7039794921875
+sewa,NRP1,Fall19,Coyote,1,31,169.66513061523438
+tawa,P-BLP,Spring19,Coyote,1,35,77.81898498535156
+tawa,P-CCP,Spring19,Coyote,2,15,584.6763916015625
+tawa,P-CUP,Spring19,Coyote,16,38,1099.23828125
+tawa,P-DPV,Spring19,Eastern gray squirrel,27,37,490
+tawa,P-GP,Spring19,Coyote,4,38,1313.6378173828125
+tawa,P-GW1,Winter19,Coyote,3,29,54.798221588134766
+tawa,P-JCP,Winter19,Eastern gray squirrel,19,15,634.412841796875
+tawa,P-LCC,Spring19,Coyote,1,10,331.5532531738281
+tawa,P-MCP,Spring19,Eastern gray squirrel,20,38,622.01641845703125
+tawa,P-MKP2,Spring19,Eastern gray squirrel,18,33,375.81787109375
+tawa,P-OB,Spring19,Eastern gray squirrel,16,37,490
+tawa,P-OLT,Spring19,Coyote,6,36,363
+tawa,P-OV1,Winter19,Bobcat,2,28,288.0676574707031
+tawa,P-PCNA2,Spring19,Coyote,1,38,908.64306640625
+tawa,P-PDP,Spring19,Coyote,1,37,490
+tawa,P-RP,Spring19,Coyote,7,38,483.0231628417969
+tawa,P-RT,Spring19,Eastern gray squirrel,7,35,352.3905334472656
+tawa,P-RWSR,Spring19,Coyote,35,36,324.96783447265625
+tawa,P-SCP2,Spring19,Eastern gray squirrel,8,24,306.7597351074219
+tawa,P-STP,Spring19,Coyote,1,38,848.71246337890625
+tawa,P-TE1,Spring19,Douglas squirrel,3,23,305.8934020996094
+tawa,P-UCC,Spring19,Coyote,1,30,422.66131591796875
+tawa,P-UWT,Spring20,Eastern gray squirrel,8,49,332.1739501953125
+tawa,P-WBC,Spring19,Eastern gray squirrel,59,35,328.8005676269531
+tawa,P-WP,Spring19,Eastern gray squirrel,43,16,1120.3955078125
+tawa,P-WWP,Spring19,Coyote,4,35,146.6680908203125
+sewa,PGP1,Spring19,Eastern gray squirrel,1,29,536.41937255859375
+sewa,PHN1,Fall19,Raccoon,3,31,857.04254150390625
+sewa,RHF1,Fall19,Virginia opossum,2,36,126.2802505493164
+sewa,RVP1,Fall19,Coyote,2,31,825.08837890625
+sewa,RWP1,Fall19,Virginia opossum,4,31,33.2607307434082
+sewa,SVP1,Fall19,Coyote,4,31,59.030757904052734
+sewa,SWD1,Fall19,Coyote,4,32,40.03009796142578
+sewa,TCC1,Fall19,Coyote,1,36,164.92031860351563
+sewa,TMF1,Fall19,Bobcat,1,35,297.0000305175781
+sewa,TMP1,Fall19,Raccoon,10,41,649.54193115234375
+sewa,TRN1,Fall19,Virginia opossum,2,35,147.00001525878906
+sewa,WCP2,Spring20,Raccoon,1,30,612.62542724609375
+sewa,WDG1,Fall19,Eastern gray squirrel,2,36,406.66619873046875

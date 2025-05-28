@@ -1,0 +1,75 @@
+city,site,season,species,count,days.active,Impervious
+tawa,B-TP,Summer19,Coyote,1,35,19.28905487060547
+sewa,BGP1,Fall19,Virginia opossum,1,32,53.57400131225586
+sewa,BRF1,Spring19,Raccoon,3,38,46.226863861083984
+sewa,DOS1,Fall19,Virginia opossum,1,36,8.84261417388916
+sewa,DRP2,Fall19,Raccoon,55,31,59.3070182800293
+sewa,DSP1,Fall19,Virginia opossum,14,31,12.351824760437012
+sewa,DWP1,Fall19,Raccoon,5,36,78.0552749633789
+sewa,FGL1,Fall19,Raccoon,1,28,49.78955078125
+sewa,FRD1,Fall19,Coyote,1,35,2.0327539443969727
+tawa,G-CBP1,Winter19,Coyote,6,35,50.42763900756836
+tawa,G-CLP3,Spring19,Douglas squirrel,3,38,52.5802116394043
+tawa,G-FP1,Spring19,Eastern gray squirrel,105,37,59.99049377441406
+tawa,G-IP,Spring20,Eastern gray squirrel,15,40,65.04859161376953
+tawa,G-JP,Spring19,Eastern gray squirrel,20,10,59.67594528198242
+tawa,G-KP1,Spring19,Coyote,2,36,62.29082107543945
+tawa,G-OTP,Spring19,Coyote,1,33,68.12483215332031
+tawa,G-SB,Spring19,Douglas squirrel,15,37,19.195859909057617
+tawa,G-SERA,Spring20,Coyote,4,50,62.98002243041992
+tawa,G-SP,Winter19,Eastern gray squirrel,48,15,65.21184539794922
+tawa,G-TNC1,Winter19,Eastern gray squirrel,1,29,58.90440368652344
+tawa,G-VP,Spring19,Coyote,1,37,45.654640197753906
+tawa,G-WLP1,Winter19,Coyote,1,28,64.963409423828125
+tawa,G-WP2,Spring19,Coyote,2,37,52.41279220581055
+sewa,HCN1,Fall19,River otter,1,36,65.38612365722656
+sewa,HFW1,Fall19,Coyote,2,33,53.00358963012695
+sewa,IRP1,Fall19,Coyote,8,31,42.17864990234375
+sewa,JBP1,Fall19,Coyote,2,46,30.10782241821289
+sewa,LTP1,Spring19,Raccoon,7,34,61.2742919921875
+sewa,LWP2,Summer19,Eastern gray squirrel,7,23,47.3494758605957
+sewa,MBC1,Fall19,Black-tailed deer,6,31,19.471498489379883
+sewa,MGP1,Fall19,Raccoon,1,31,20.109777450561523
+sewa,MPO1,Fall19,Virginia opossum,3,35,10.751884460449219
+sewa,MSR1,Fall19,Raccoon,1,36,63.853614807128906
+sewa,MWP1,Spring19,Virginia opossum,2,32,71.27113342285156
+sewa,NRP1,Fall19,Coyote,1,31,43.713958740234375
+tawa,P-BLP,Spring19,Coyote,1,35,48.69049835205078
+tawa,P-CCP,Spring19,Coyote,2,15,29.480472564697266
+tawa,P-CUP,Spring19,Coyote,16,38,43.33259963989258
+tawa,P-DPV,Spring19,Eastern gray squirrel,27,37,0.3939252495765686
+tawa,P-GP,Spring19,Coyote,4,38,43.07604217529297
+tawa,P-GW1,Winter19,Coyote,3,29,77.20146179199219
+tawa,P-JCP,Winter19,Eastern gray squirrel,19,15,55.812191009521484
+tawa,P-LCC,Spring19,Coyote,1,10,39.488521575927734
+tawa,P-MCP,Spring19,Eastern gray squirrel,20,38,76.79121398925781
+tawa,P-MKP2,Spring19,Eastern gray squirrel,18,33,69.30524444580078
+tawa,P-OB,Spring19,Eastern gray squirrel,16,37,0.8366096019744873
+tawa,P-OLT,Spring19,Coyote,6,36,1.2033185958862305
+tawa,P-OV1,Winter19,Bobcat,2,28,1.926249384880066
+tawa,P-PCNA2,Spring19,Coyote,1,38,44.7434196472168
+tawa,P-PDP,Spring19,Coyote,1,37,25.67672348022461
+tawa,P-RP,Spring19,Coyote,7,38,58.6058235168457
+tawa,P-RT,Spring19,Eastern gray squirrel,7,35,58.163429260253906
+tawa,P-RWSR,Spring19,Coyote,35,36,2.669215202331543
+tawa,P-SCP2,Spring19,Eastern gray squirrel,8,24,35.647178649902344
+tawa,P-STP,Spring19,Coyote,1,38,33.19274139404297
+tawa,P-TE1,Spring19,Douglas squirrel,3,23,3.7358174324035645
+tawa,P-UCC,Spring19,Coyote,1,30,23.053340911865234
+tawa,P-UWT,Spring20,Eastern gray squirrel,8,49,77.65489959716797
+tawa,P-WBC,Spring19,Eastern gray squirrel,59,35,43.9511833190918
+tawa,P-WP,Spring19,Eastern gray squirrel,43,16,59.99137878417969
+tawa,P-WWP,Spring19,Coyote,4,35,30.7639217376709
+sewa,PGP1,Spring19,Eastern gray squirrel,1,29,32.43716812133789
+sewa,PHN1,Fall19,Raccoon,3,31,61.729610443115234
+sewa,RHF1,Fall19,Virginia opossum,2,36,2.05790114402771
+sewa,RVP1,Fall19,Coyote,2,31,60.40186309814453
+sewa,RWP1,Fall19,Virginia opossum,4,31,5.946011066436768
+sewa,SVP1,Fall19,Coyote,4,31,24.308565139770508
+sewa,SWD1,Fall19,Coyote,4,32,30.409055709838867
+sewa,TCC1,Fall19,Coyote,1,36,44.25346374511719
+sewa,TMF1,Fall19,Bobcat,1,35,2.6757972240448
+sewa,TMP1,Fall19,Raccoon,10,41,61.519771575927734
+sewa,TRN1,Fall19,Virginia opossum,2,35,9.26653003692627
+sewa,WCP2,Spring20,Raccoon,1,30,51.424903869628906
+sewa,WDG1,Fall19,Eastern gray squirrel,2,36,48.746864318847656
